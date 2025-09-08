@@ -534,18 +534,21 @@ function autofarm.getStatus()
         autoReel = autofarm.autoReelEnabled,
         alwaysCatch = autofarm.alwaysCatchEnabled,
         shakeMode = autofarm.shakeMode,
-        castMode = autofarm.castMode
+        castMode = autofarm.castMode,
+        reelMode = autofarm.reelMode
     }
 end
 
 -- Start all autofarm features
-function autofarm.startAll(shakeMode, castMode)
+function autofarm.startAll(shakeMode, castMode, reelMode)
     shakeMode = shakeMode or 1
     castMode = castMode or 1
+    reelMode = reelMode or 1
     autofarm.startAutoCast(castMode)
     autofarm.startAutoShake(shakeMode)
-    autofarm.startAutoReel()
+    autofarm.startAutoReel(reelMode)
     autofarm.startAlwaysCatch()
+    print("All Autofarm Started: Cast=" .. castMode .. ", Shake=" .. shakeMode .. ", Reel=" .. reelMode)
 end
 
 -- Stop all autofarm features
@@ -569,7 +572,7 @@ local function handleCharacterRespawn()
             wait(2) -- Wait for character to load
             if status.autoCast then autofarm.startAutoCast(status.castMode) end
             if status.autoShake then autofarm.startAutoShake(status.shakeMode) end
-            if status.autoReel then autofarm.startAutoReel() end
+            if status.autoReel then autofarm.startAutoReel(status.reelMode) end
             if status.alwaysCatch then autofarm.startAlwaysCatch() end
         end
     end)

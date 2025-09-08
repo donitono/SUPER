@@ -71,34 +71,27 @@ AutofarmSection:NewToggle("Auto Shake", "Automatically shake when needed", funct
     end
 end)
 
--- Auto Reel
-AutofarmTab:CreateDropdown({
-   Name = "Auto Reel Mode",
-   Options = {"Legit (Follow Fish)", "Instant (Perfect)"},
-   CurrentOption = "Legit (Follow Fish)",
-   Callback = function(Option)
-       local selectedMode = 1
-       if Option == "Instant (Perfect)" then
-           selectedMode = 2
-       end
-       autofarm.reelMode = selectedMode
-       print("Auto Reel mode set to: " .. Option)
-   end,
-})
+-- Auto Reel Mode Selection
+local currentReelMode = 1
+AutofarmSection:NewDropdown("Reel Mode", "Select auto reel mode", {"Legit (Follow Fish)", "Instant (Perfect)"}, function(option)
+    if option == "Legit (Follow Fish)" then
+        currentReelMode = 1
+    elseif option == "Instant (Perfect)" then
+        currentReelMode = 2
+    end
+    autofarm.reelMode = currentReelMode
+    print("Auto Reel mode set to: " .. option)
+end)
 
-AutofarmTab:CreateToggle({
-   Name = "Auto Reel",
-   CurrentValue = false,
-   Callback = function(Value)
-       if Value then
-           autofarm.startAutoReel(autofarm.reelMode)
-           print("Auto Reel started in mode: " .. (autofarm.reelMode == 1 and "Legit" or "Instant"))
-       else
-           autofarm.stopAutoReel()
-           print("Auto Reel stopped")
-       end
-   end,
-})
+AutofarmSection:NewToggle("Auto Reel", "Automatically reel fish with selected mode", function(state)
+    if state then
+        autofarm.startAutoReel(currentReelMode)
+        print("Auto Reel: Enabled (Mode " .. (currentReelMode == 1 and "Legit" or "Instant") .. ")")
+    else
+        autofarm.stopAutoReel()
+        print("Auto Reel: Disabled")
+    end
+end)
 
 -- Always Catch (dari sanhub)
 AutofarmSection:NewToggle("Always Catch", "Never miss a fish - perfect catch every time", function(state)
@@ -115,9 +108,9 @@ end)
 local QuickSection = AutofarmTab:NewSection("Quick Actions")
 
 QuickSection:NewButton("Start All Autofarm", "Enable all autofarm features", function()
-    autofarm.startAll(currentShakeMode, currentCastMode)
+    autofarm.startAll(currentShakeMode, currentCastMode, currentReelMode)
     print("All Autofarm Features: Enabled")
-    print("Cast Mode: " .. currentCastMode .. ", Shake Mode: " .. currentShakeMode)
+    print("Cast Mode: " .. currentCastMode .. ", Shake Mode: " .. currentShakeMode .. ", Reel Mode: " .. currentReelMode)
 end)
 
 QuickSection:NewButton("Stop All Autofarm", "Disable all autofarm features", function()
@@ -134,6 +127,7 @@ QuickSection:NewButton("Check Status", "Show current autofarm status", function(
     print("Always Catch: " .. tostring(status.alwaysCatch))
     print("Cast Mode: " .. tostring(status.castMode))
     print("Shake Mode: " .. tostring(status.shakeMode))
+    print("Reel Mode: " .. tostring(autofarm.reelMode))
     print("=====================")
 end)
 
