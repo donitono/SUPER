@@ -27,57 +27,181 @@ function autofarm.startAutoCast(mode)
     autofarm.autoCastEnabled = true
     autofarm.castMode = mode or 1
     
-    spawn(function()
-        while autofarm.autoCastEnabled do
-            local success, err = pcall(function()
-                local castEvent = ReplicatedStorage:FindFirstChild("events")
-                if castEvent then
-                    local cast = castEvent:FindFirstChild("cast")
-                    if cast then
-                        if autofarm.castMode == 1 then
-                            -- Mode 1: Legit - consistent good cast
-                            local power = math.random(85, 95) -- Realistic power range
-                            local accuracy = 1 -- Good accuracy
-                            cast:FireServer(power, accuracy)
-                            
-                        elseif autofarm.castMode == 2 then
-                            -- Mode 2: Rage - maximum power always
-                            cast:FireServer(100, 1) -- 100% power, perfect accuracy
-                            
-                        elseif autofarm.castMode == 3 then
-                            -- Mode 3: Random - legit but with random power
-                            local power = math.random(70, 100) -- Wide random range
-                            local accuracy = math.random(1, 1) -- Keep accuracy good
-                            cast:FireServer(power, accuracy)
+    -- Hook untuk tool equipped
+    local function onCharacterChildAdded(child)
+        if not autofarm.autoCastEnabled then return end
+        
+        if child:IsA("Tool") and child:FindFirstChild("events") then
+            local castEvent = child.events:FindFirstChild("cast")
+            if castEvent then
+                task.wait(2) -- Delay sebelum cast
+                
+                local success, err = pcall(function()
+                    if autofarm.castMode == 1 then
+                        -- Mode 1: Legit - simulate mouse click dan monitor power bar
+                        local VirtualInputManager = game:GetService("VirtualInputManager")
+                        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, player, 0)
+                        
+                        -- Monitor power bar untuk release
+                        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+                        if humanoidRootPart then
+                            local powerConnection
+                            powerConnection = humanoidRootPart.ChildAdded:Connect(function(powerChild)
+                                if powerChild.Name == "power" then
+                                    local powerbar = powerChild:FindFirstChild("powerbar")
+                                    if powerbar and powerbar:FindFirstChild("bar") then
+                                        local barConnection
+                                        barConnection = powerbar.bar:GetPropertyChangedSignal("Size"):Connect(function()
+                                            local targetSize = math.random(85, 95) / 100 -- Legit range
+                                            if powerbar.bar.Size.X.Scale >= targetSize then
+                                                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, player, 0)
+                                                barConnection:Disconnect()
+                                                powerConnection:Disconnect()
+                                            end
+                                        end)
+                                    end
+                                end
+                            end)
+                        end
+                        
+                    elseif autofarm.castMode == 2 then
+                        -- Mode 2: Rage - direct FireServer
+                        castEvent:FireServer(100)
+                        
+                    elseif autofarm.castMode == 3 then
+                        -- Mode 3: Random - legit with random timing
+                        local VirtualInputManager = game:GetService("VirtualInputManager")
+                        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, player, 0)
+                        
+                        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+                        if humanoidRootPart then
+                            local powerConnection
+                            powerConnection = humanoidRootPart.ChildAdded:Connect(function(powerChild)
+                                if powerChild.Name == "power" then
+                                    local powerbar = powerChild:FindFirstChild("powerbar")
+                                    if powerbar and powerbar:FindFirstChild("bar") then
+                                        local barConnection
+                                        barConnection = powerbar.bar:GetPropertyChangedSignal("Size"):Connect(function()
+                                            local targetSize = math.random(70, 100) / 100 -- Random range
+                                            if powerbar.bar.Size.X.Scale >= targetSize then
+                                                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, player, 0)
+                                                barConnection:Disconnect()
+                                                powerConnection:Disconnect()
+                                            end
+                                        end)
+                                    end
+                                end
+                            end)
                         end
                     end
-                end
+                end)
                 
-                -- Alternative method - menggunakan Tool activation
-                local tool = character:FindFirstChildOfClass("Tool")
-                if tool then
-                    tool:Activate()
+                if not success then
+                    warn("Auto Cast Error: " .. tostring(err))
                 end
-            end)
-            
-            if not success then
-                warn("Auto Cast Error: " .. tostring(err))
-            end
-            
-            -- Different delays based on mode
-            if autofarm.castMode == 1 then
-                wait(math.random(0.15, 0.25)) -- Legit: human-like delay
-            elseif autofarm.castMode == 2 then
-                wait(0.1) -- Rage: fast casting
-            elseif autofarm.castMode == 3 then
-                wait(math.random(0.1, 0.3)) -- Random: random delay
             end
         end
-    end)
+    end
+    
+    -- Hook untuk reel finished (auto recast)
+    local function onGuiRemoved(gui)
+        if not autofarm.autoCastEnabled then return end
+        
+        if gui.Name == "reel" then
+            local tool = character:FindFirstChildOfClass("Tool")
+            if tool and tool:FindFirstChild("events") then
+                local castEvent = tool.events:FindFirstChild("cast")
+                if castEvent then
+                    task.wait(2) -- Delay sebelum recast
+                    
+                    local success, err = pcall(function()
+                        if autofarm.castMode == 1 then
+                            -- Legit mode recast
+                            local VirtualInputManager = game:GetService("VirtualInputManager")
+                            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, player, 0)
+                            
+                            local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+                            if humanoidRootPart then
+                                local powerConnection
+                                powerConnection = humanoidRootPart.ChildAdded:Connect(function(powerChild)
+                                    if powerChild.Name == "power" then
+                                        local powerbar = powerChild:FindFirstChild("powerbar")
+                                        if powerbar and powerbar:FindFirstChild("bar") then
+                                            local barConnection
+                                            barConnection = powerbar.bar:GetPropertyChangedSignal("Size"):Connect(function()
+                                                local targetSize = math.random(85, 95) / 100
+                                                if powerbar.bar.Size.X.Scale >= targetSize then
+                                                    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, player, 0)
+                                                    barConnection:Disconnect()
+                                                    powerConnection:Disconnect()
+                                                end
+                                            end)
+                                        end
+                                    end
+                                end)
+                            end
+                            
+                        elseif autofarm.castMode == 2 then
+                            -- Rage mode recast
+                            castEvent:FireServer(100)
+                            
+                        elseif autofarm.castMode == 3 then
+                            -- Random mode recast
+                            local VirtualInputManager = game:GetService("VirtualInputManager")
+                            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, player, 0)
+                            
+                            local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+                            if humanoidRootPart then
+                                local powerConnection
+                                powerConnection = humanoidRootPart.ChildAdded:Connect(function(powerChild)
+                                    if powerChild.Name == "power" then
+                                        local powerbar = powerChild:FindFirstChild("powerbar")
+                                        if powerbar and powerbar:FindFirstChild("bar") then
+                                            local barConnection
+                                            barConnection = powerbar.bar:GetPropertyChangedSignal("Size"):Connect(function()
+                                                local targetSize = math.random(70, 100) / 100
+                                                if powerbar.bar.Size.X.Scale >= targetSize then
+                                                    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, player, 0)
+                                                    barConnection:Disconnect()
+                                                    powerConnection:Disconnect()
+                                                end
+                                            end)
+                                        end
+                                    end
+                                end)
+                            end
+                        end
+                    end)
+                    
+                    if not success then
+                        warn("Auto Cast Recast Error: " .. tostring(err))
+                    end
+                end
+            end
+        end
+    end
+    
+    -- Connect events
+    autofarm.castConnection1 = character.ChildAdded:Connect(onCharacterChildAdded)
+    autofarm.castConnection2 = player.PlayerGui.ChildRemoved:Connect(onGuiRemoved)
+    
+    print("Auto Cast started with mode: " .. autofarm.castMode)
 end
 
 function autofarm.stopAutoCast()
     autofarm.autoCastEnabled = false
+    
+    -- Disconnect connections
+    if autofarm.castConnection1 then
+        autofarm.castConnection1:Disconnect()
+        autofarm.castConnection1 = nil
+    end
+    if autofarm.castConnection2 then
+        autofarm.castConnection2:Disconnect()
+        autofarm.castConnection2 = nil
+    end
+    
+    print("Auto Cast stopped")
 end
 
 -- Auto Shake dengan 2 mode
@@ -85,65 +209,67 @@ function autofarm.startAutoShake(mode)
     autofarm.autoShakeEnabled = true
     autofarm.shakeMode = mode or 1
     
-    spawn(function()
-        while autofarm.autoShakeEnabled do
-            local success, err = pcall(function()
-                if autofarm.shakeMode == 1 then
-                    -- Mode 1: Method dari sanhub
-                    local shakeEvent = ReplicatedStorage:FindFirstChild("events")
-                    if shakeEvent then
-                        local shake = shakeEvent:FindFirstChild("shake")
-                        if shake then
-                            shake:FireServer(100, true)
-                        end
-                    end
-                    
-                elseif autofarm.shakeMode == 2 then
-                    -- Mode 2: Method dari neoxhub (lebih advanced)
-                    local playerGui = player:WaitForChild("PlayerGui")
-                    local shakeUI = playerGui:FindFirstChild("shakeui")
-                    
-                    if shakeUI then
-                        local safezone = shakeUI:FindFirstChild("safezone")
-                        if safezone then
-                            local button = safezone:FindFirstChild("button")
-                            if button and button.Visible then
-                                -- Simulate button click
-                                local buttonPosition = button.AbsolutePosition
-                                local buttonSize = button.AbsoluteSize
-                                local centerX = buttonPosition.X + (buttonSize.X / 2)
-                                local centerY = buttonPosition.Y + (buttonSize.Y / 2)
-                                
-                                -- Fire mouse click event
-                                game:GetService("VirtualInputManager"):SendMouseButtonEvent(centerX, centerY, 0, true, game, 1)
-                                wait(0.05)
-                                game:GetService("VirtualInputManager"):SendMouseButtonEvent(centerX, centerY, 0, false, game, 1)
+    -- Function untuk handle shake
+    local function handleShake()
+        if not autofarm.autoShakeEnabled then return end
+        
+        local success, err = pcall(function()
+            if autofarm.shakeMode == 1 then
+                -- Mode 1: Method dari sanhub - menggunakan GuiService dan VirtualInputManager
+                local playerGui = player:WaitForChild("PlayerGui")
+                local shakeUI = playerGui:FindFirstChild("shakeui")
+                
+                if shakeUI then
+                    local safezone = shakeUI:FindFirstChild("safezone")
+                    if safezone then
+                        local button = safezone:FindFirstChild("button")
+                        if button then
+                            -- Set selected object dan send return key
+                            game:GetService("GuiService").SelectedObject = button
+                            if game:GetService("GuiService").SelectedObject == button then
+                                local VirtualInputManager = game:GetService("VirtualInputManager")
+                                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
+                                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
+                                print("Shake performed (SanHub method)")
                             end
                         end
                     end
-                    
-                    -- Backup method untuk neoxhub
-                    local shakeEvent = ReplicatedStorage:FindFirstChild("events")
+                end
+                
+            elseif autofarm.shakeMode == 2 then
+                -- Mode 2: Method dari neoxhub - menggunakan tool shake event
+                local tool = character:FindFirstChildOfClass("Tool")
+                if tool and tool:FindFirstChild("events") then
+                    local shakeEvent = tool.events:FindFirstChild("shake")
                     if shakeEvent then
-                        local shake = shakeEvent:FindFirstChild("shake")
-                        if shake then
-                            shake:FireServer(math.random(95, 100), true)
-                        end
+                        shakeEvent:FireServer()
+                        print("Shake performed (NeoxHub method)")
                     end
                 end
-            end)
-            
-            if not success then
-                warn("Auto Shake Error: " .. tostring(err))
             end
-            
-            wait(0.05) -- Faster response untuk shake
+        end)
+        
+        if not success then
+            warn("Auto Shake Error: " .. tostring(err))
         end
-    end)
+    end
+    
+    -- Connect to RenderStepped untuk continuous checking
+    autofarm.shakeConnection = RunService.RenderStepped:Connect(handleShake)
+    
+    print("Auto Shake started with mode: " .. autofarm.shakeMode)
 end
 
 function autofarm.stopAutoShake()
     autofarm.autoShakeEnabled = false
+    
+    -- Disconnect shake connection
+    if autofarm.shakeConnection then
+        autofarm.shakeConnection:Disconnect()
+        autofarm.shakeConnection = nil
+    end
+    
+    print("Auto Shake stopped")
 end
 
 -- Auto Reel (dari sanhub)

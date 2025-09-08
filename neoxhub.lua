@@ -1,2834 +1,1717 @@
-local Kavo = {}
-
-local tween = game:GetService("TweenService")
-local tweeninfo = TweenInfo.new
-local input = game:GetService("UserInputService")
-local run = game:GetService("RunService")
-
--- Helper function for touch + mouse compatible clicks
-function Kavo:ConnectClick(element, callback)
-    element.InputBegan:Connect(function(inputObject)
-        if inputObject.UserInputType == Enum.UserInputType.MouseButton1 or inputObject.UserInputType == Enum.UserInputType.Touch then
-            callback()
-        end
-    end)
-    -- Fallback for older compatibility
-    pcall(function()
-        element.MouseButton1Click:Connect(callback)
-    end)
-end
-
-local Utility = {}
-local Objects = {}
-function Kavo:DraggingEnabled(frame, parent)
-        
-    parent = parent or frame
-    
-    -- stolen from wally or kiriot, kek
-    local dragging = false
-    local dragInput, mousePos, framePos
-    local UserInputService = game:GetService("UserInputService")
-
-    frame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            mousePos = input.Position
-            framePos = parent.Position
-            
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-
-    frame.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            local delta = input.Position - mousePos
-            parent.Position  = UDim2.new(framePos.X.Scale, framePos.X.Offset + delta.X, framePos.Y.Scale, framePos.Y.Offset + delta.Y)
-        end
-    end)
-end
-
-function Utility:TweenObject(obj, properties, duration, ...)
-    tween:Create(obj, tweeninfo(duration, ...), properties):Play()
-end
-
-
-local themes = {
-    SchemeColor = Color3.fromRGB(74, 99, 135),
-    Background = Color3.fromRGB(36, 37, 43),
-    Header = Color3.fromRGB(28, 29, 34),
-    TextColor = Color3.fromRGB(255,255,255),
-    ElementColor = Color3.fromRGB(32, 32, 38)
-}
-local themeStyles = {
-    DarkTheme = {
-        SchemeColor = Color3.fromRGB(64, 64, 64),
-        Background = Color3.fromRGB(0, 0, 0),
-        Header = Color3.fromRGB(0, 0, 0),
-        TextColor = Color3.fromRGB(255,255,255),
-        ElementColor = Color3.fromRGB(20, 20, 20)
-    },
-    LightTheme = {
-        SchemeColor = Color3.fromRGB(150, 150, 150),
-        Background = Color3.fromRGB(255,255,255),
-        Header = Color3.fromRGB(200, 200, 200),
-        TextColor = Color3.fromRGB(0,0,0),
-        ElementColor = Color3.fromRGB(224, 224, 224)
-    },
-    BloodTheme = {
-        SchemeColor = Color3.fromRGB(227, 27, 27),
-        Background = Color3.fromRGB(10, 10, 10),
-        Header = Color3.fromRGB(5, 5, 5),
-        TextColor = Color3.fromRGB(255,255,255),
-        ElementColor = Color3.fromRGB(20, 20, 20)
-    },
-    GrapeTheme = {
-        SchemeColor = Color3.fromRGB(166, 71, 214),
-        Background = Color3.fromRGB(64, 50, 71),
-        Header = Color3.fromRGB(36, 28, 41),
-        TextColor = Color3.fromRGB(255,255,255),
-        ElementColor = Color3.fromRGB(74, 58, 84)
-    },
-    Ocean = {
-        SchemeColor = Color3.fromRGB(86, 76, 251),
-        Background = Color3.fromRGB(26, 32, 58),
-        Header = Color3.fromRGB(38, 45, 71),
-        TextColor = Color3.fromRGB(200, 200, 200),
-        ElementColor = Color3.fromRGB(38, 45, 71)
-    },
-    Midnight = {
-        SchemeColor = Color3.fromRGB(26, 189, 158),
-        Background = Color3.fromRGB(44, 62, 82),
-        Header = Color3.fromRGB(57, 81, 105),
-        TextColor = Color3.fromRGB(255, 255, 255),
-        ElementColor = Color3.fromRGB(52, 74, 95)
-    },
-    Sentinel = {
-        SchemeColor = Color3.fromRGB(230, 35, 69),
-        Background = Color3.fromRGB(32, 32, 32),
-        Header = Color3.fromRGB(24, 24, 24),
-        TextColor = Color3.fromRGB(119, 209, 138),
-        ElementColor = Color3.fromRGB(24, 24, 24)
-    },
-    Synapse = {
-        SchemeColor = Color3.fromRGB(46, 48, 43),
-        Background = Color3.fromRGB(13, 15, 12),
-        Header = Color3.fromRGB(36, 38, 35),
-        TextColor = Color3.fromRGB(152, 99, 53),
-        ElementColor = Color3.fromRGB(24, 24, 24)
-    },
-    Serpent = {
-        SchemeColor = Color3.fromRGB(0, 166, 58),
-        Background = Color3.fromRGB(31, 41, 43),
-        Header = Color3.fromRGB(22, 29, 31),
-        TextColor = Color3.fromRGB(255,255,255),
-        ElementColor = Color3.fromRGB(22, 29, 31)
+local v126 = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local v127 =
+    v126:CreateWindow(
+    {
+        ["Title"] = "NEOX HUB | FISCHv1.2",
+        ["SubTitle"] = "by hassanxzayn",
+        ["TabWidth"] = 588 - 428,
+        ["Size"] = UDim2.fromOffset(580, 280 + 180),
+        ["Acrylic"] = false,
+        ["Theme"] = "Dark",
+        ["MinimizeKey"] = Enum.KeyCode.LeftControl
     }
+)
+local v128 = {
+    ["Home"] = v127:AddTab({["Title"] = "Home", ["Icon"] = "rbxassetid://7733960981"}),
+    ["Main"] = v127:AddTab({["Title"] = "Main", ["Icon"] = "rbxassetid://7733749837"}),
+    ["Misc"] = v127:AddTab({["Title"] = "Misc", ["Icon"] = "rbxassetid://7733789088"}),
+    ["Weather"] = v127:AddTab({["Title"] = "Weather", ["Icon"] = "rbxassetid://7734068495"}),
+    ["Teleport"] = v127:AddTab({["Title"] = "Teleport", ["Icon"] = "rbxassetid://7733924216"}),
+    ["Performance"] = v127:AddTab({["Title"] = "Performance", ["Icon"] = "rbxassetid://7733955511"}),
+    ["Settings"] = v127:AddTab({["Title"] = "Settings", ["Icon"] = "settings"})
 }
-local oldTheme = ""
+local v129 =
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))(
 
-local SettingsT = {
-
-}
-
-local Name = "KavoConfig.JSON"
-
-pcall(function()
-
-if not pcall(function() readfile(Name) end) then
-writefile(Name, game:service'HttpService':JSONEncode(SettingsT))
-end
-
-Settings = game:service'HttpService':JSONEncode(readfile(Name))
-end)
-
-local LibName = tostring(math.random(1, 100))..tostring(math.random(1,50))..tostring(math.random(1, 100))
-
-function Kavo:ToggleUI()
-    if game.CoreGui[LibName].Enabled then
-        game.CoreGui[LibName].Enabled = false
-    else
-        game.CoreGui[LibName].Enabled = true
-    end
-end
-
-function Kavo.CreateLib(kavName, themeList)
-    if not themeList then
-        themeList = themes
-    end
-    if themeList == "DarkTheme" then
-        themeList = themeStyles.DarkTheme
-    elseif themeList == "LightTheme" then
-        themeList = themeStyles.LightTheme
-    elseif themeList == "BloodTheme" then
-        themeList = themeStyles.BloodTheme
-    elseif themeList == "GrapeTheme" then
-        themeList = themeStyles.GrapeTheme
-    elseif themeList == "Ocean" then
-        themeList = themeStyles.Ocean
-    elseif themeList == "Midnight" then
-        themeList = themeStyles.Midnight
-    elseif themeList == "Sentinel" then
-        themeList = themeStyles.Sentinel
-    elseif themeList == "Synapse" then
-        themeList = themeStyles.Synapse
-    elseif themeList == "Serpent" then
-        themeList = themeStyles.Serpent
-    else
-        if themeList.SchemeColor == nil then
-            themeList.SchemeColor = Color3.fromRGB(74, 99, 135)
-        elseif themeList.Background == nil then
-            themeList.Background = Color3.fromRGB(36, 37, 43)
-        elseif themeList.Header == nil then
-            themeList.Header = Color3.fromRGB(28, 29, 34)
-        elseif themeList.TextColor == nil then
-            themeList.TextColor = Color3.fromRGB(255,255,255)
-        elseif themeList.ElementColor == nil then
-            themeList.ElementColor = Color3.fromRGB(32, 32, 38)
-        end
-    end
-
-    themeList = themeList or {}
-    local selectedTab 
-    kavName = kavName or "Library"
-    table.insert(Kavo, kavName)
-    for i,v in pairs(game.CoreGui:GetChildren()) do
-        if v:IsA("ScreenGui") and v.Name == kavName then
-            v:Destroy()
-        end
-    end
-    local ScreenGui = Instance.new("ScreenGui")
-    local Main = Instance.new("Frame")
-    local MainCorner = Instance.new("UICorner")
-    local MainHeader = Instance.new("Frame")
-    local headerCover = Instance.new("UICorner")
-    local coverup = Instance.new("Frame")
-    local title = Instance.new("TextLabel")
-    local close = Instance.new("ImageButton")
-    local MainSide = Instance.new("Frame")
-    local sideCorner = Instance.new("UICorner")
-    local coverup_2 = Instance.new("Frame")
-    local tabFrames = Instance.new("Frame")
-    local tabListing = Instance.new("UIListLayout")
-    local pages = Instance.new("Frame")
-    local Pages = Instance.new("Folder")
-    local infoContainer = Instance.new("Frame")
-
-    local blurFrame = Instance.new("Frame")
-
-    Kavo:DraggingEnabled(MainHeader, Main)
-
-    blurFrame.Name = "blurFrame"
-    blurFrame.Parent = pages
-    blurFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    blurFrame.BackgroundTransparency = 1
-    blurFrame.BorderSizePixel = 0
-    blurFrame.Position = UDim2.new(-0.0222222228, 0, -0.0371747203, 0)
-    blurFrame.Size = UDim2.new(0, 376, 0, 289)
-    blurFrame.ZIndex = 999
-
-    ScreenGui.Parent = game.CoreGui
-    ScreenGui.Name = LibName
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    ScreenGui.ResetOnSpawn = false
-
-    Main.Name = "Main"
-    Main.Parent = ScreenGui
-    Main.BackgroundColor3 = themeList.Background
-    Main.ClipsDescendants = true
-    Main.Position = UDim2.new(0.336503863, 0, 0.275485456, 0)
-    Main.Size = UDim2.new(0, 525, 0, 318)
-
-    MainCorner.CornerRadius = UDim.new(0, 4)
-    MainCorner.Name = "MainCorner"
-    MainCorner.Parent = Main
-
-    MainHeader.Name = "MainHeader"
-    MainHeader.Parent = Main
-    MainHeader.BackgroundColor3 = themeList.Header
-    Objects[MainHeader] = "BackgroundColor3"
-    MainHeader.Size = UDim2.new(0, 525, 0, 29)
-    MainHeader.Active = true  -- Enable input for dragging
-    headerCover.CornerRadius = UDim.new(0, 4)
-    headerCover.Name = "headerCover"
-    headerCover.Parent = MainHeader
-
-    coverup.Name = "coverup"
-    coverup.Parent = MainHeader
-    coverup.BackgroundColor3 = themeList.Header
-    Objects[coverup] = "BackgroundColor3"
-    coverup.BorderSizePixel = 0
-    coverup.Position = UDim2.new(0, 0, 0.758620679, 0)
-    coverup.Size = UDim2.new(0, 525, 0, 7)
-
-    title.Name = "title"
-    title.Parent = MainHeader
-    title.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    title.BackgroundTransparency = 1.000
-    title.BorderSizePixel = 0
-    title.Position = UDim2.new(0.0171428565, 0, 0.344827592, 0)
-    title.Size = UDim2.new(0, 204, 0, 8)
-    title.Font = Enum.Font.Gotham
-    title.RichText = true
-    title.Text = kavName
-    title.TextColor3 = Color3.fromRGB(245, 245, 245)
-    title.TextSize = 16.000
-    title.TextXAlignment = Enum.TextXAlignment.Left
-
-    close.Name = "close"
-    close.Parent = MainHeader
-    close.BackgroundTransparency = 1.000
-    close.Position = UDim2.new(0.949999988, 0, 0.137999997, 0)
-    close.Size = UDim2.new(0, 21, 0, 21)
-    close.ZIndex = 2
-    close.Image = "rbxassetid://3926305904"
-    close.ImageRectOffset = Vector2.new(284, 4)
-    close.ImageRectSize = Vector2.new(24, 24)
-    close.MouseButton1Click:Connect(function()
-        game.TweenService:Create(close, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {
-            ImageTransparency = 1
-        }):Play()
-        wait()
-        game.TweenService:Create(Main, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			Size = UDim2.new(0,0,0,0),
-			Position = UDim2.new(0, Main.AbsolutePosition.X + (Main.AbsoluteSize.X / 2), 0, Main.AbsolutePosition.Y + (Main.AbsoluteSize.Y / 2))
-		}):Play()
-        wait(1)
-        ScreenGui:Destroy()
-    end)
-    -- Touch support for close button
-    Kavo:ConnectClick(close, function()
-        game.TweenService:Create(close, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {
-            ImageTransparency = 1
-        }):Play()
-        wait()
-        game.TweenService:Create(Main, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			Size = UDim2.new(0,0,0,0),
-			Position = UDim2.new(0, Main.AbsolutePosition.X + (Main.AbsoluteSize.X / 2), 0, Main.AbsolutePosition.Y + (Main.AbsoluteSize.Y / 2))
-		}):Play()
-        wait(1)
-        ScreenGui:Destroy()
-    end)
-
-    -- Add minimize button right next to close button
-    local minimize = Instance.new("TextButton")
-    minimize.Name = "minimize"
-    minimize.Parent = MainHeader
-    minimize.BackgroundColor3 = Color3.fromRGB(74, 99, 135)
-    minimize.Position = UDim2.new(0.91, 0, 0.137999997, 0)
-    minimize.Size = UDim2.new(0, 21, 0, 21)
-    minimize.ZIndex = 2
-    minimize.Text = "—"
-    minimize.TextColor3 = Color3.fromRGB(255, 255, 255)
-    minimize.TextSize = 14
-    minimize.Font = Enum.Font.SourceSansBold
-    minimize.BorderSizePixel = 0
-    
-    local minimizeCorner = Instance.new("UICorner")
-    minimizeCorner.CornerRadius = UDim.new(0, 3)
-    minimizeCorner.Parent = minimize
-    
-    minimize.MouseButton1Click:Connect(function()
-        Main.Visible = false
-        
-        -- Create floating button
-        local floatingGui = Instance.new("ScreenGui")
-        floatingGui.Name = "FloatingButton"
-        floatingGui.ResetOnSpawn = false
-        floatingGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-        floatingGui.DisplayOrder = 999999
-        
-        local floatingFrame = Instance.new("Frame")
-        floatingFrame.Name = "FloatingFrame"
-        floatingFrame.Size = UDim2.new(0, 60, 0, 60)
-        floatingFrame.Position = UDim2.new(1, -80, 0, 20)
-        floatingFrame.BackgroundColor3 = Color3.fromRGB(45, 65, 95)
-        floatingFrame.BorderSizePixel = 0
-        floatingFrame.Parent = floatingGui
-        floatingFrame.Active = true
-        floatingFrame.Draggable = true
-        
-        local floatingCorner = Instance.new("UICorner")
-        floatingCorner.CornerRadius = UDim.new(0, 30)
-        floatingCorner.Parent = floatingFrame
-        
-        local floatingButton = Instance.new("TextButton")
-        floatingButton.Name = "RestoreButton"
-        floatingButton.Size = UDim2.new(1, 0, 1, 0)
-        floatingButton.Position = UDim2.new(0, 0, 0, 0)
-        floatingButton.BackgroundTransparency = 1
-        floatingButton.Text = "🎣"
-        floatingButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-        floatingButton.TextSize = 24
-        floatingButton.Font = Enum.Font.SourceSansBold
-        floatingButton.Parent = floatingFrame
-        
-        floatingButton.MouseButton1Click:Connect(function()
-            Main.Visible = true
-            floatingGui:Destroy()
-        end)
-        -- Touch support for floating button
-        Kavo:ConnectClick(floatingButton, function()
-            Main.Visible = true
-            floatingGui:Destroy()
-        end)
-        
-        -- Add to CoreGui or PlayerGui
-        pcall(function()
-            if game.CoreGui then
-                floatingGui.Parent = game.CoreGui
-            else
-                floatingGui.Parent = game.Players.LocalPlayer.PlayerGui
+)
+local v130 =
+    loadstring(
+    game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua")
+)()
+v129:SetLibrary(v126)
+v130:SetLibrary(v126)
+v130:BuildInterfaceSection(v128.Settings)
+v129:BuildConfigSection(v128.Settings)
+v127:SelectTab(2 - 1)
+v128.Home:AddButton(
+    {
+        ["Title"] = "Join our discord",
+        ["Description"] = "Click on this button to copy the invite link!",
+        ["Callback"] = function()
+            local v149 = 0
+            local v150
+            while true do
+                if (v149 == 0) then
+                    v150 = "https://discord.gg/25ms"
+                    if setclipboard then
+                        local v308 = 0
+                        local v309
+                        while true do
+                            if (v308 == 0) then
+                                v309 = 0
+                                while true do
+                                    if (v309 == 0) then
+                                        setclipboard(v150)
+                                        print("Discord invite link copied to clipboard!")
+                                        break
+                                    end
+                                end
+                                break
+                            end
+                        end
+                    else
+                        print("setclipboard function not available.")
+                    end
+                    break
+                end
             end
-        end)
-    end)
-    -- Touch support for minimize button
-    Kavo:ConnectClick(minimize, function()
-        Main.Visible = false
-        
-        -- Create floating button
-        local floatingGui = Instance.new("ScreenGui")
-        floatingGui.Name = "FloatingButton"
-        floatingGui.ResetOnSpawn = false
-        floatingGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-        floatingGui.DisplayOrder = 999999
-        
-        local floatingFrame = Instance.new("Frame")
-        floatingFrame.Name = "FloatingFrame"
-        floatingFrame.Size = UDim2.new(0, 60, 0, 60)
-        floatingFrame.Position = UDim2.new(1, -80, 0, 20)
-        floatingFrame.BackgroundColor3 = Color3.fromRGB(45, 65, 95)
-        floatingFrame.BorderSizePixel = 0
-        floatingFrame.Parent = floatingGui
-        floatingFrame.Active = true
-        floatingFrame.Draggable = true
-        
-        local floatingCorner = Instance.new("UICorner")
-        floatingCorner.CornerRadius = UDim.new(0, 30)
-        floatingCorner.Parent = floatingFrame
-        
-        local floatingButton = Instance.new("TextButton")
-        floatingButton.Name = "RestoreButton"
-        floatingButton.Size = UDim2.new(1, 0, 1, 0)
-        floatingButton.Position = UDim2.new(0, 0, 0, 0)
-        floatingButton.BackgroundTransparency = 1
-        floatingButton.Text = "🎣"
-        floatingButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-        floatingButton.TextSize = 24
-        floatingButton.Font = Enum.Font.SourceSansBold
-        floatingButton.Parent = floatingFrame
-        
-        -- Touch support for floating button
-        Kavo:ConnectClick(floatingButton, function()
-            Main.Visible = true
-            floatingGui:Destroy()
-        end)
-        
-        -- Add to CoreGui or PlayerGui
-        pcall(function()
-            if game.CoreGui then
-                floatingGui.Parent = game.CoreGui
-            else
-                floatingGui.Parent = game.Players.LocalPlayer.PlayerGui
-            end
-        end)
-    end)
-
-    MainSide.Name = "MainSide"
-    MainSide.Parent = Main
-    MainSide.BackgroundColor3 = themeList.Header
-    Objects[MainSide] = "Header"
-    MainSide.Position = UDim2.new(-7.4505806e-09, 0, 0.0911949649, 0)
-    MainSide.Size = UDim2.new(0, 149, 0, 289)
-
-    sideCorner.CornerRadius = UDim.new(0, 4)
-    sideCorner.Name = "sideCorner"
-    sideCorner.Parent = MainSide
-
-    coverup_2.Name = "coverup"
-    coverup_2.Parent = MainSide
-    coverup_2.BackgroundColor3 = themeList.Header
-    Objects[coverup_2] = "Header"
-    coverup_2.BorderSizePixel = 0
-    coverup_2.Position = UDim2.new(0.949939311, 0, 0, 0)
-    coverup_2.Size = UDim2.new(0, 7, 0, 289)
-
-    tabFrames.Name = "tabFrames"
-    tabFrames.Parent = MainSide
-    tabFrames.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    tabFrames.BackgroundTransparency = 1.000
-    tabFrames.Position = UDim2.new(0.0438990258, 0, -0.00066378375, 0)
-    tabFrames.Size = UDim2.new(0, 135, 0, 283)
-
-    tabListing.Name = "tabListing"
-    tabListing.Parent = tabFrames
-    tabListing.SortOrder = Enum.SortOrder.LayoutOrder
-    tabListing.Padding = UDim.new(0, 2)  -- Add small padding between tabs for divider spacing
-
-    pages.Name = "pages"
-    pages.Parent = Main
-    pages.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    pages.BackgroundTransparency = 1.000
-    pages.BorderSizePixel = 0
-    pages.Position = UDim2.new(0.299047589, 0, 0.122641519, 0)
-    pages.Size = UDim2.new(0, 360, 0, 269)
-
-    Pages.Name = "Pages"
-    Pages.Parent = pages
-
-    infoContainer.Name = "infoContainer"
-    infoContainer.Parent = Main
-    infoContainer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    infoContainer.BackgroundTransparency = 1.000
-    infoContainer.BorderColor3 = Color3.fromRGB(27, 42, 53)
-    infoContainer.ClipsDescendants = true
-    infoContainer.Position = UDim2.new(0.299047619, 0, 0.874213815, 0)
-    infoContainer.Size = UDim2.new(0, 368, 0, 33)
-
-    
-    coroutine.wrap(function()
-        while wait() do
-            Main.BackgroundColor3 = themeList.Background
-            MainHeader.BackgroundColor3 = themeList.Header
-            MainSide.BackgroundColor3 = themeList.Header
-            coverup_2.BackgroundColor3 = themeList.Header
-            coverup.BackgroundColor3 = themeList.Header
         end
-    end)()
-
-    function Kavo:ChangeColor(prope,color)
-        if prope == "Background" then
-            themeList.Background = color
-        elseif prope == "SchemeColor" then
-            themeList.SchemeColor = color
-        elseif prope == "Header" then
-            themeList.Header = color
-        elseif prope == "TextColor" then
-            themeList.TextColor = color
-        elseif prope == "ElementColor" then
-            themeList.ElementColor = color
+    }
+)
+v128.Home:AddParagraph(
+    {
+        ["Title"] = "About Our Discord",
+        ["Content"] = "NEOX HUB, the ultimate Roblox exploit hub, now has its very own Discord server! This is your go-to place to stay updated on all the latest features, scripts, and announcements. Here’s what you can do in our server:\nStay Informed:\nGet real-time updates on the latest developments, script releases, and exploit features available in NEOX HUB.\nScript Requests:\nNeed a specific script? Submit your requests, and our team or community may create one for you.\nExclusive Giveaways:\nParticipate in exciting Robux giveaways exclusively for our Discord members.\nCommunity Interaction:\nConnect with like-minded exploit enthusiasts, share tips, and get help from a supportive community.\nMuch More:\nEnjoy sneak peeks, community events, and future features tailored for NEOX HUB users."
+    }
+)
+v128.Home:AddParagraph(
+    {
+        ["Title"] = "Join us",
+        ["Content"] = "Join us now and take your Roblox experience to the next level with NEOX HUB’s dedicated community!"
+    }
+)
+v128.Main:AddButton(
+    {
+        ["Title"] = "Sell Holding Fish",
+        ["Description"] = "Sold Fish That Is In Your Hand",
+        ["Callback"] = function()
+            Workspace:WaitForChild("world"):WaitForChild("npcs"):WaitForChild("Marc Merchant"):WaitForChild(
+                "merchant"
+            ):WaitForChild("sell"):InvokeServer()
         end
-    end
-    local Tabs = {}
-
-    local first = true
-
-    function Tabs:NewTab(tabName)
-        tabName = tabName or "Tab"
-        local tabButton = Instance.new("TextButton")
-        local UICorner = Instance.new("UICorner")
-        local page = Instance.new("ScrollingFrame")
-        local pageListing = Instance.new("UIListLayout")
-
-        local function UpdateSize()
-            local cS = pageListing.AbsoluteContentSize
-
-            game.TweenService:Create(page, TweenInfo.new(0.15, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                CanvasSize = UDim2.new(0,cS.X,0,cS.Y)
-            }):Play()
+    }
+)
+v128.Main:AddButton(
+    {
+        ["Title"] = "Sell All Fishes",
+        ["Description"] = "Sold All Fishes That Are In You Inventory",
+        ["Callback"] = function()
+            Workspace:WaitForChild("world"):WaitForChild("npcs"):WaitForChild("Marc Merchant"):WaitForChild(
+                "merchant"
+            ):WaitForChild("sellall"):InvokeServer()
         end
-
-        page.Name = "Page"
-        page.Parent = Pages
-        page.Active = true
-        page.BackgroundColor3 = themeList.Background
-        page.BorderSizePixel = 0
-        page.Position = UDim2.new(0, 0, -0.00371747208, 0)
-        page.Size = UDim2.new(1, 0, 1, 0)
-        page.ScrollBarThickness = 5
-        page.Visible = false
-        page.ScrollBarImageColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 16, themeList.SchemeColor.g * 255 - 15, themeList.SchemeColor.b * 255 - 28)
-
-        pageListing.Name = "pageListing"
-        pageListing.Parent = page
-        pageListing.SortOrder = Enum.SortOrder.LayoutOrder
-        pageListing.Padding = UDim.new(0, 5)
-
-        tabButton.Name = tabName.."TabButton"
-        tabButton.Parent = tabFrames
-        tabButton.BackgroundColor3 = themeList.SchemeColor
-        Objects[tabButton] = "SchemeColor"
-        tabButton.Size = UDim2.new(0, 135, 0, 28)
-        tabButton.AutoButtonColor = false
-        tabButton.Font = Enum.Font.Gotham
-        tabButton.Text = tabName
-        tabButton.TextColor3 = themeList.TextColor
-        Objects[tabButton] = "TextColor3"
-        tabButton.TextSize = 14.000
-        tabButton.BackgroundTransparency = 1
-        
-        -- Add bottom border for tab separation
-        if not first then  -- Don't add border to the first tab
-            local tabBorder = Instance.new("Frame")
-            tabBorder.Name = "TabBorder"
-            tabBorder.Parent = tabButton
-            tabBorder.BackgroundColor3 = Color3.fromRGB(
-                themeList.SchemeColor.r * 255 - 30, 
-                themeList.SchemeColor.g * 255 - 30, 
-                themeList.SchemeColor.b * 255 - 30
+    }
+)
+v128.Main:AddButton(
+    {
+        ["Title"] = "Appraise fish",
+        ["Description"] = "IDK",
+        ["Callback"] = function()
+            Workspace:WaitForChild("world"):WaitForChild("npcs"):WaitForChild("Appraiser"):WaitForChild("appraiser"):WaitForChild(
+                "appraise"
+            ):InvokeServer()
+        end
+    }
+)
+v128.Main:AddButton(
+    {
+        ["Title"] = "AutoReel + AutoShake + AutoCast",
+        ["Description"] = "All Combine With Better Verion",
+        ["Callback"] = function()
+            local v151 =
+                loadstring(
+                game:HttpGet("https://raw.githubusercontent.com/Turtle-Brand/Turtle-Lib/main/source.lua")
+            )()
+            local v152 =
+                v151:Window(
+                "NEOX HUB",
+                {
+                    ["Color"] = Color3.fromRGB(25, 11 + 24, 74 - 29),
+                    ["Size"] = UDim2.new(0, 500, 0, 1995 - (210 + 1385))
+                }
             )
-            tabBorder.BorderSizePixel = 0
-            tabBorder.Size = UDim2.new(0.8, 0, 0, 1)  -- Horizontal line, 80% width
-            tabBorder.Position = UDim2.new(0.1, 0, 0, 0)  -- Centered horizontally, at top
-            Objects[tabBorder] = "BackgroundColor3"
-        end
-
-        if first then
-            first = false
-            page.Visible = true
-            tabButton.BackgroundTransparency = 0
-            UpdateSize()
-        else
-            page.Visible = false
-            tabButton.BackgroundTransparency = 1
-        end
-
-        UICorner.CornerRadius = UDim.new(0, 5)
-        UICorner.Parent = tabButton
-        table.insert(Tabs, tabName)
-
-        UpdateSize()
-        page.ChildAdded:Connect(UpdateSize)
-        page.ChildRemoved:Connect(UpdateSize)
-
-        tabButton.MouseButton1Click:Connect(function()
-            UpdateSize()
-            for i,v in next, Pages:GetChildren() do
-                v.Visible = false
+            local v153 = game:GetService("Players")
+            local v154 = game:GetService("StarterGui")
+            local v155 = game:GetService("GuiService")
+            local v156 = game:GetService("ReplicatedStorage")
+            local v157 = game:GetService("VirtualInputManager")
+            local v158 = game:GetService("UserInputService")
+            local v159 = v153.LocalPlayer
+            local v160 = false
+            local v161 = nil
+            local v162 = false
+            local v163 = false
+            local v164
+            local v165 = 1689 - (1201 + 488)
+            local function v166(v236, v237)
+                v154:SetCore(
+                    "SendNotification",
+                    {
+                        ["Title"] = "NEOX HUB",
+                        ["Text"] = v236,
+                        ["Duration"] = v237 or (0.5 + 0),
+                        ["Button1Text"] = "Okay"
+                    }
+                )
             end
-            page.Visible = true
-            for i,v in next, tabFrames:GetChildren() do
-                if v:IsA("TextButton") then
-                    if themeList.SchemeColor == Color3.fromRGB(255,255,255) then
-                        Utility:TweenObject(v, {TextColor3 = Color3.fromRGB(255,255,255)}, 0.2)
-                    end 
-                    if themeList.SchemeColor == Color3.fromRGB(0,0,0) then
-                        Utility:TweenObject(v, {TextColor3 = Color3.fromRGB(0,0,0)}, 0.2)
-                    end 
-                    Utility:TweenObject(v, {BackgroundTransparency = 1}, 0.2)
-                end
-            end
-            if themeList.SchemeColor == Color3.fromRGB(255,255,255) then
-                Utility:TweenObject(tabButton, {TextColor3 = Color3.fromRGB(0,0,0)}, 0.2)
-            end 
-            if themeList.SchemeColor == Color3.fromRGB(0,0,0) then
-                Utility:TweenObject(tabButton, {TextColor3 = Color3.fromRGB(255,255,255)}, 0.2)
-            end 
-            Utility:TweenObject(tabButton, {BackgroundTransparency = 0}, 0.2)
-        end)
-        local Sections = {}
-        local focusing = false
-        local viewDe = false
-
-        coroutine.wrap(function()
-            while wait() do
-                page.BackgroundColor3 = themeList.Background
-                page.ScrollBarImageColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 16, themeList.SchemeColor.g * 255 - 15, themeList.SchemeColor.b * 255 - 28)
-                tabButton.TextColor3 = themeList.TextColor
-                tabButton.BackgroundColor3 = themeList.SchemeColor
-            end
-        end)()
-    
-        function Sections:NewSection(secName, hidden)
-            secName = secName or "Section"
-            local sectionFunctions = {}
-            local modules = {}
-	    hidden = hidden or false
-            local sectionFrame = Instance.new("Frame")
-            local sectionlistoknvm = Instance.new("UIListLayout")
-            local sectionHead = Instance.new("Frame")
-            local sHeadCorner = Instance.new("UICorner")
-            local sectionName = Instance.new("TextLabel")
-            local sectionInners = Instance.new("Frame")
-            local sectionElListing = Instance.new("UIListLayout")
-			
-	    if hidden then
-		sectionHead.Visible = false
-	    else
-		sectionHead.Visible = true
-	    end
-
-            sectionFrame.Name = "sectionFrame"
-            sectionFrame.Parent = page
-            sectionFrame.BackgroundColor3 = themeList.Background--36, 37, 43
-            sectionFrame.BorderSizePixel = 0
-            
-            sectionlistoknvm.Name = "sectionlistoknvm"
-            sectionlistoknvm.Parent = sectionFrame
-            sectionlistoknvm.SortOrder = Enum.SortOrder.LayoutOrder
-            sectionlistoknvm.Padding = UDim.new(0, 5)
-
-            for i,v in pairs(sectionInners:GetChildren()) do
-                while wait() do
-                    if v:IsA("Frame") or v:IsA("TextButton") then
-                        function size(pro)
-                            if pro == "Size" then
-                                UpdateSize()
-                                updateSectionFrame()
-                            end
-                        end
-                        v.Changed:Connect(size)
-                    end
-                end
-            end
-            sectionHead.Name = "sectionHead"
-            sectionHead.Parent = sectionFrame
-            sectionHead.BackgroundColor3 = themeList.SchemeColor
-            Objects[sectionHead] = "BackgroundColor3"
-            sectionHead.Size = UDim2.new(0, 352, 0, 33)
-
-            sHeadCorner.CornerRadius = UDim.new(0, 4)
-            sHeadCorner.Name = "sHeadCorner"
-            sHeadCorner.Parent = sectionHead
-
-            sectionName.Name = "sectionName"
-            sectionName.Parent = sectionHead
-            sectionName.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-            sectionName.BackgroundTransparency = 1.000
-            sectionName.BorderColor3 = Color3.fromRGB(27, 42, 53)
-            sectionName.Position = UDim2.new(0.0198863633, 0, 0, 0)
-            sectionName.Size = UDim2.new(0.980113626, 0, 1, 0)
-            sectionName.Font = Enum.Font.Gotham
-            sectionName.Text = secName
-            sectionName.RichText = true
-            sectionName.TextColor3 = themeList.TextColor
-            Objects[sectionName] = "TextColor3"
-            sectionName.TextSize = 14.000
-            sectionName.TextXAlignment = Enum.TextXAlignment.Left
-            if themeList.SchemeColor == Color3.fromRGB(255,255,255) then
-                Utility:TweenObject(sectionName, {TextColor3 = Color3.fromRGB(0,0,0)}, 0.2)
-            end 
-            if themeList.SchemeColor == Color3.fromRGB(0,0,0) then
-                Utility:TweenObject(sectionName, {TextColor3 = Color3.fromRGB(255,255,255)}, 0.2)
-            end 
-               
-            sectionInners.Name = "sectionInners"
-            sectionInners.Parent = sectionFrame
-            sectionInners.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-            sectionInners.BackgroundTransparency = 1.000
-            sectionInners.Position = UDim2.new(0, 0, 0.190751448, 0)
-
-            sectionElListing.Name = "sectionElListing"
-            sectionElListing.Parent = sectionInners
-            sectionElListing.SortOrder = Enum.SortOrder.LayoutOrder
-            sectionElListing.Padding = UDim.new(0, 3)
-
-            
-        coroutine.wrap(function()
-            while wait() do
-                sectionFrame.BackgroundColor3 = themeList.Background
-                sectionHead.BackgroundColor3 = themeList.SchemeColor
-                tabButton.TextColor3 = themeList.TextColor
-                tabButton.BackgroundColor3 = themeList.SchemeColor
-                sectionName.TextColor3 = themeList.TextColor
-            end
-        end)()
-
-            local function updateSectionFrame()
-                local innerSc = sectionElListing.AbsoluteContentSize
-                sectionInners.Size = UDim2.new(1, 0, 0, innerSc.Y)
-                local frameSc = sectionlistoknvm.AbsoluteContentSize
-                sectionFrame.Size = UDim2.new(0, 352, 0, frameSc.Y)
-            end
-                updateSectionFrame()
-                UpdateSize()
-            local Elements = {}
-            function Elements:NewButton(bname,tipINf, callback)
-                showLogo = showLogo or true
-                local ButtonFunction = {}
-                tipINf = tipINf or "Tip: Clicking this nothing will happen!"
-                bname = bname or "Click Me!"
-                callback = callback or function() end
-
-                local buttonElement = Instance.new("TextButton")
-                local UICorner = Instance.new("UICorner")
-                local btnInfo = Instance.new("TextLabel")
-                local viewInfo = Instance.new("ImageButton")
-                local touch = Instance.new("ImageLabel")
-                local Sample = Instance.new("ImageLabel")
-
-                table.insert(modules, bname)
-
-                buttonElement.Name = bname
-                buttonElement.Parent = sectionInners
-                buttonElement.BackgroundColor3 = themeList.ElementColor
-                buttonElement.ClipsDescendants = true
-                buttonElement.Size = UDim2.new(0, 352, 0, 33)
-                buttonElement.AutoButtonColor = false
-                buttonElement.Font = Enum.Font.SourceSans
-                buttonElement.Text = ""
-                buttonElement.TextColor3 = Color3.fromRGB(0, 0, 0)
-                buttonElement.TextSize = 14.000
-                Objects[buttonElement] = "BackgroundColor3"
-
-                UICorner.CornerRadius = UDim.new(0, 4)
-                UICorner.Parent = buttonElement
-
-                viewInfo.Name = "viewInfo"
-                viewInfo.Parent = buttonElement
-                viewInfo.BackgroundTransparency = 1.000
-                viewInfo.LayoutOrder = 9
-                viewInfo.Position = UDim2.new(0.930000007, 0, 0.151999995, 0)
-                viewInfo.Size = UDim2.new(0, 23, 0, 23)
-                viewInfo.ZIndex = 2
-                viewInfo.Image = "rbxassetid://3926305904"
-                viewInfo.ImageColor3 = themeList.SchemeColor
-                Objects[viewInfo] = "ImageColor3"
-                viewInfo.ImageRectOffset = Vector2.new(764, 764)
-                viewInfo.ImageRectSize = Vector2.new(36, 36)
-
-                Sample.Name = "Sample"
-                Sample.Parent = buttonElement
-                Sample.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                Sample.BackgroundTransparency = 1.000
-                Sample.Image = "http://www.roblox.com/asset/?id=4560909609"
-                Sample.ImageColor3 = themeList.SchemeColor
-                Objects[Sample] = "ImageColor3"
-                Sample.ImageTransparency = 0.600
-
-                local moreInfo = Instance.new("TextLabel")
-                local UICorner = Instance.new("UICorner")
-
-                moreInfo.Name = "TipMore"
-                moreInfo.Parent = infoContainer
-                moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
-                moreInfo.Position = UDim2.new(0, 0, 2, 0)
-                moreInfo.Size = UDim2.new(0, 353, 0, 33)
-                moreInfo.ZIndex = 9
-                moreInfo.Font = Enum.Font.GothamSemibold
-                moreInfo.Text = "  "..tipINf
-                moreInfo.RichText = true
-                moreInfo.TextColor3 = themeList.TextColor
-                Objects[moreInfo] = "TextColor3"
-                moreInfo.TextSize = 14.000
-                moreInfo.TextXAlignment = Enum.TextXAlignment.Left
-                Objects[moreInfo] = "BackgroundColor3"
-
-                UICorner.CornerRadius = UDim.new(0, 4)
-                UICorner.Parent = moreInfo
-
-                touch.Name = "touch"
-                touch.Parent = buttonElement
-                touch.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                touch.BackgroundTransparency = 1.000
-                touch.BorderColor3 = Color3.fromRGB(27, 42, 53)
-                touch.Position = UDim2.new(0.0199999996, 0, 0.180000007, 0)
-                touch.Size = UDim2.new(0, 21, 0, 21)
-                touch.Image = "rbxassetid://3926305904"
-                touch.ImageColor3 = themeList.SchemeColor
-                Objects[touch] = "SchemeColor"
-                touch.ImageRectOffset = Vector2.new(84, 204)
-                touch.ImageRectSize = Vector2.new(36, 36)
-                touch.ImageTransparency = 0
-
-                btnInfo.Name = "btnInfo"
-                btnInfo.Parent = buttonElement
-                btnInfo.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                btnInfo.BackgroundTransparency = 1.000
-                btnInfo.Position = UDim2.new(0.096704483, 0, 0.272727281, 0)
-                btnInfo.Size = UDim2.new(0, 314, 0, 14)
-                btnInfo.Font = Enum.Font.GothamSemibold
-                btnInfo.Text = bname
-                btnInfo.RichText = true
-                btnInfo.TextColor3 = themeList.TextColor
-                Objects[btnInfo] = "TextColor3"
-                btnInfo.TextSize = 14.000
-                btnInfo.TextXAlignment = Enum.TextXAlignment.Left
-
-                if themeList.SchemeColor == Color3.fromRGB(255,255,255) then
-                    Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(0,0,0)}, 0.2)
-                end 
-                if themeList.SchemeColor == Color3.fromRGB(0,0,0) then
-                    Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(255,255,255)}, 0.2)
-                end 
-
-                updateSectionFrame()
-                                UpdateSize()
-
-                local ms = game.Players.LocalPlayer:GetMouse()
-
-                local btn = buttonElement
-                local sample = Sample
-
-                btn.MouseButton1Click:Connect(function()
-                    if not focusing then
-                        callback()
-                        local c = sample:Clone()
-                        c.Parent = btn
-                        local x, y = (ms.X - c.AbsolutePosition.X), (ms.Y - c.AbsolutePosition.Y)
-                        c.Position = UDim2.new(0, x, 0, y)
-                        local len, size = 0.35, nil
-                        if btn.AbsoluteSize.X >= btn.AbsoluteSize.Y then
-                            size = (btn.AbsoluteSize.X * 1.5)
-                        else
-                            size = (btn.AbsoluteSize.Y * 1.5)
-                        end
-                        c:TweenSizeAndPosition(UDim2.new(0, size, 0, size), UDim2.new(0.5, (-size / 2), 0.5, (-size / 2)), 'Out', 'Quad', len, true, nil)
-                        for i = 1, 10 do
-                            c.ImageTransparency = c.ImageTransparency + 0.05
-                            wait(len / 12)
-                        end
-                        c:Destroy()
-                    else
-                        for i,v in next, infoContainer:GetChildren() do
-                            Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                            focusing = false
-                        end
-                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
-                    end
-                end)
-                local hovering = false
-                btn.MouseEnter:Connect(function()
-                    if not focusing then
-                        game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 8, themeList.ElementColor.g * 255 + 9, themeList.ElementColor.b * 255 + 10)
-                        }):Play()
-                        hovering = true
-                    end
-                end)
-                btn.MouseLeave:Connect(function()
-                    if not focusing then 
-                        game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            BackgroundColor3 = themeList.ElementColor
-                        }):Play()
-                        hovering = false
-                    end
-                end)
-                viewInfo.MouseButton1Click:Connect(function()
-                    if not viewDe then
-                        viewDe = true
-                        focusing = true
-                        for i,v in next, infoContainer:GetChildren() do
-                            if v ~= moreInfo then
-                                Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                            end
-                        end
-                        Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,0,0)}, 0.2)
-                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 0.5}, 0.2)
-                        Utility:TweenObject(btn, {BackgroundColor3 = themeList.ElementColor}, 0.2)
-                        wait(1.5)
-                        focusing = false
-                        Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
-                        wait(0)
-                        viewDe = false
-                    end
-                end)
-                coroutine.wrap(function()
-                    while wait() do
-                        if not hovering then
-                            buttonElement.BackgroundColor3 = themeList.ElementColor
-                        end
-                        viewInfo.ImageColor3 = themeList.SchemeColor
-                        Sample.ImageColor3 = themeList.SchemeColor
-                        moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
-                        moreInfo.TextColor3 = themeList.TextColor
-                        touch.ImageColor3 = themeList.SchemeColor
-                        btnInfo.TextColor3 = themeList.TextColor
-                    end
-                end)()
-                
-                function ButtonFunction:UpdateButton(newTitle)
-                    btnInfo.Text = newTitle
-                end
-                return ButtonFunction
-            end
-
-            function Elements:NewTextBox(tname, tTip, callback)
-                tname = tname or "Textbox"
-                tTip = tTip or "Gets a value of Textbox"
-                callback = callback or function() end
-                local textboxElement = Instance.new("TextButton")
-                local UICorner = Instance.new("UICorner")
-                local viewInfo = Instance.new("ImageButton")
-                local write = Instance.new("ImageLabel")
-                local TextBox = Instance.new("TextBox")
-                local UICorner_2 = Instance.new("UICorner")
-                local togName = Instance.new("TextLabel")
-
-                textboxElement.Name = "textboxElement"
-                textboxElement.Parent = sectionInners
-                textboxElement.BackgroundColor3 = themeList.ElementColor
-                textboxElement.ClipsDescendants = true
-                textboxElement.Size = UDim2.new(0, 352, 0, 33)
-                textboxElement.AutoButtonColor = false
-                textboxElement.Font = Enum.Font.SourceSans
-                textboxElement.Text = ""
-                textboxElement.TextColor3 = Color3.fromRGB(0, 0, 0)
-                textboxElement.TextSize = 14.000
-
-                UICorner.CornerRadius = UDim.new(0, 4)
-                UICorner.Parent = textboxElement
-
-                viewInfo.Name = "viewInfo"
-                viewInfo.Parent = textboxElement
-                viewInfo.BackgroundTransparency = 1.000
-                viewInfo.LayoutOrder = 9
-                viewInfo.Position = UDim2.new(0.930000007, 0, 0.151999995, 0)
-                viewInfo.Size = UDim2.new(0, 23, 0, 23)
-                viewInfo.ZIndex = 2
-                viewInfo.Image = "rbxassetid://3926305904"
-                viewInfo.ImageColor3 = themeList.SchemeColor
-                viewInfo.ImageRectOffset = Vector2.new(764, 764)
-                viewInfo.ImageRectSize = Vector2.new(36, 36)
-
-                write.Name = "write"
-                write.Parent = textboxElement
-                write.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                write.BackgroundTransparency = 1.000
-                write.BorderColor3 = Color3.fromRGB(27, 42, 53)
-                write.Position = UDim2.new(0.0199999996, 0, 0.180000007, 0)
-                write.Size = UDim2.new(0, 21, 0, 21)
-                write.Image = "rbxassetid://3926305904"
-                write.ImageColor3 = themeList.SchemeColor
-                write.ImageRectOffset = Vector2.new(324, 604)
-                write.ImageRectSize = Vector2.new(36, 36)
-
-                TextBox.Parent = textboxElement
-                TextBox.BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 - 6, themeList.ElementColor.g * 255 - 6, themeList.ElementColor.b * 255 - 7)
-                TextBox.BorderSizePixel = 0
-                TextBox.ClipsDescendants = true
-                TextBox.Position = UDim2.new(0.488749921, 0, 0.212121218, 0)
-                TextBox.Size = UDim2.new(0, 150, 0, 18)
-                TextBox.ZIndex = 99
-                TextBox.ClearTextOnFocus = false
-                TextBox.Font = Enum.Font.Gotham
-                TextBox.PlaceholderColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 19, themeList.SchemeColor.g * 255 - 26, themeList.SchemeColor.b * 255 - 35)
-                TextBox.PlaceholderText = "Type here!"
-                TextBox.Text = ""
-                TextBox.TextColor3 = themeList.SchemeColor
-                TextBox.TextSize = 12.000
-
-                UICorner_2.CornerRadius = UDim.new(0, 4)
-                UICorner_2.Parent = TextBox
-
-                togName.Name = "togName"
-                togName.Parent = textboxElement
-                togName.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                togName.BackgroundTransparency = 1.000
-                togName.Position = UDim2.new(0.096704483, 0, 0.272727281, 0)
-                togName.Size = UDim2.new(0, 138, 0, 14)
-                togName.Font = Enum.Font.GothamSemibold
-                togName.Text = tname
-                togName.RichText = true
-                togName.TextColor3 = themeList.TextColor
-                togName.TextSize = 14.000
-                togName.TextXAlignment = Enum.TextXAlignment.Left
-
-                local moreInfo = Instance.new("TextLabel")
-                local UICorner = Instance.new("UICorner")
-
-                moreInfo.Name = "TipMore"
-                moreInfo.Parent = infoContainer
-                moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
-                moreInfo.Position = UDim2.new(0, 0, 2, 0)
-                moreInfo.Size = UDim2.new(0, 353, 0, 33)
-                moreInfo.ZIndex = 9
-                moreInfo.Font = Enum.Font.GothamSemibold
-                moreInfo.RichText = true
-                moreInfo.Text = "  "..tTip
-                moreInfo.TextColor3 = Color3.fromRGB(255, 255, 255)
-                moreInfo.TextSize = 14.000
-                moreInfo.TextXAlignment = Enum.TextXAlignment.Left
-
-                if themeList.SchemeColor == Color3.fromRGB(255,255,255) then
-                    Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(0,0,0)}, 0.2)
-                end 
-                if themeList.SchemeColor == Color3.fromRGB(0,0,0) then
-                    Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(255,255,255)}, 0.2)
-                end 
-
-                UICorner.CornerRadius = UDim.new(0, 4)
-                UICorner.Parent = moreInfo
-
-
-                updateSectionFrame()
-                                UpdateSize()
-            
-                local btn = textboxElement
-                local infBtn = viewInfo
-
-                btn.MouseButton1Click:Connect(function()
-                    if focusing then
-                        for i,v in next, infoContainer:GetChildren() do
-                            Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                            focusing = false
-                        end
-                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
-                    end
-                end)
-                local hovering = false
-                btn.MouseEnter:Connect(function()
-                    if not focusing then
-                        game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 8, themeList.ElementColor.g * 255 + 9, themeList.ElementColor.b * 255 + 10)
-                        }):Play()
-                        hovering = true
-                    end 
-                end)
-
-                btn.MouseLeave:Connect(function()
-                    if not focusing then
-                        game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            BackgroundColor3 = themeList.ElementColor
-                        }):Play()
-                        hovering = false
-                    end
-                end)
-
-                TextBox.FocusLost:Connect(function(EnterPressed)
-                    if focusing then
-                        for i,v in next, infoContainer:GetChildren() do
-                            Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                            focusing = false
-                        end
-                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
-                    end
-                    if not EnterPressed then 
-                        return
-                    else
-                        callback(TextBox.Text)
-                        wait(0.18)
-                        TextBox.Text = ""  
-                    end
-                end)
-
-                viewInfo.MouseButton1Click:Connect(function()
-                    if not viewDe then
-                        viewDe = true
-                        focusing = true
-                        for i,v in next, infoContainer:GetChildren() do
-                            if v ~= moreInfo then
-                                Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                            end
-                        end
-                        Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,0,0)}, 0.2)
-                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 0.5}, 0.2)
-                        Utility:TweenObject(btn, {BackgroundColor3 = themeList.ElementColor}, 0.2)
-                        wait(1.5)
-                        focusing = false
-                        Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
-                        wait(0)
-                        viewDe = false
-                    end
-                end)
-                coroutine.wrap(function()
-                    while wait() do
-                        if not hovering then
-                            textboxElement.BackgroundColor3 = themeList.ElementColor
-                        end
-                        TextBox.BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 - 6, themeList.ElementColor.g * 255 - 6, themeList.ElementColor.b * 255 - 7)
-                        viewInfo.ImageColor3 = themeList.SchemeColor
-                        moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
-                        moreInfo.TextColor3 = themeList.TextColor
-                        write.ImageColor3 = themeList.SchemeColor
-                        togName.TextColor3 = themeList.TextColor
-                        TextBox.PlaceholderColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 19, themeList.SchemeColor.g * 255 - 26, themeList.SchemeColor.b * 255 - 35)
-                        TextBox.TextColor3 = themeList.SchemeColor
-                    end
-                end)()
-            end 
-
-                function Elements:NewToggle(tname, nTip, callback)
-                    local TogFunction = {}
-                    tname = tname or "Toggle"
-                    nTip = nTip or "Prints Current Toggle State"
-                    callback = callback or function() end
-                    local toggled = false
-                    table.insert(SettingsT, tname)
-
-                    local toggleElement = Instance.new("TextButton")
-                    local UICorner = Instance.new("UICorner")
-                    local toggleDisabled = Instance.new("ImageLabel")
-                    local toggleEnabled = Instance.new("ImageLabel")
-                    local togName = Instance.new("TextLabel")
-                    local viewInfo = Instance.new("ImageButton")
-                    local Sample = Instance.new("ImageLabel")
-
-                    toggleElement.Name = "toggleElement"
-                    toggleElement.Parent = sectionInners
-                    toggleElement.BackgroundColor3 = themeList.ElementColor
-                    toggleElement.ClipsDescendants = true
-                    toggleElement.Size = UDim2.new(0, 352, 0, 33)
-                    toggleElement.AutoButtonColor = false
-                    toggleElement.Font = Enum.Font.SourceSans
-                    toggleElement.Text = ""
-                    toggleElement.TextColor3 = Color3.fromRGB(0, 0, 0)
-                    toggleElement.TextSize = 14.000
-
-                    UICorner.CornerRadius = UDim.new(0, 4)
-                    UICorner.Parent = toggleElement
-
-                    toggleDisabled.Name = "toggleDisabled"
-                    toggleDisabled.Parent = toggleElement
-                    toggleDisabled.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                    toggleDisabled.BackgroundTransparency = 1.000
-                    toggleDisabled.Position = UDim2.new(0.0199999996, 0, 0.180000007, 0)
-                    toggleDisabled.Size = UDim2.new(0, 21, 0, 21)
-                    toggleDisabled.Image = "rbxassetid://3926309567"
-                    toggleDisabled.ImageColor3 = themeList.SchemeColor
-                    toggleDisabled.ImageRectOffset = Vector2.new(628, 420)
-                    toggleDisabled.ImageRectSize = Vector2.new(48, 48)
-
-                    toggleEnabled.Name = "toggleEnabled"
-                    toggleEnabled.Parent = toggleElement
-                    toggleEnabled.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                    toggleEnabled.BackgroundTransparency = 1.000
-                    toggleEnabled.Position = UDim2.new(0.0199999996, 0, 0.180000007, 0)
-                    toggleEnabled.Size = UDim2.new(0, 21, 0, 21)
-                    toggleEnabled.Image = "rbxassetid://3926309567"
-                    toggleEnabled.ImageColor3 = themeList.SchemeColor
-                    toggleEnabled.ImageRectOffset = Vector2.new(784, 420)
-                    toggleEnabled.ImageRectSize = Vector2.new(48, 48)
-                    toggleEnabled.ImageTransparency = 1.000
-
-                    togName.Name = "togName"
-                    togName.Parent = toggleElement
-                    togName.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                    togName.BackgroundTransparency = 1.000
-                    togName.Position = UDim2.new(0.096704483, 0, 0.272727281, 0)
-                    togName.Size = UDim2.new(0, 288, 0, 14)
-                    togName.Font = Enum.Font.GothamSemibold
-                    togName.Text = tname
-                    togName.RichText = true
-                    togName.TextColor3 = themeList.TextColor
-                    togName.TextSize = 14.000
-                    togName.TextXAlignment = Enum.TextXAlignment.Left
-
-                    viewInfo.Name = "viewInfo"
-                    viewInfo.Parent = toggleElement
-                    viewInfo.BackgroundTransparency = 1.000
-                    viewInfo.LayoutOrder = 9
-                    viewInfo.Position = UDim2.new(0.930000007, 0, 0.151999995, 0)
-                    viewInfo.Size = UDim2.new(0, 23, 0, 23)
-                    viewInfo.ZIndex = 2
-                    viewInfo.Image = "rbxassetid://3926305904"
-                    viewInfo.ImageColor3 = themeList.SchemeColor
-                    viewInfo.ImageRectOffset = Vector2.new(764, 764)
-                    viewInfo.ImageRectSize = Vector2.new(36, 36)
-
-                    Sample.Name = "Sample"
-                    Sample.Parent = toggleElement
-                    Sample.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                    Sample.BackgroundTransparency = 1.000
-                    Sample.Image = "http://www.roblox.com/asset/?id=4560909609"
-                    Sample.ImageColor3 = themeList.SchemeColor
-                    Sample.ImageTransparency = 0.600
-
-                    local moreInfo = Instance.new("TextLabel")
-                    local UICorner = Instance.new("UICorner")
-    
-                    moreInfo.Name = "TipMore"
-                    moreInfo.Parent = infoContainer
-                    moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
-                    moreInfo.Position = UDim2.new(0, 0, 2, 0)
-                    moreInfo.Size = UDim2.new(0, 353, 0, 33)
-                    moreInfo.ZIndex = 9
-                    moreInfo.Font = Enum.Font.GothamSemibold
-                    moreInfo.RichText = true
-                    moreInfo.Text = "  "..nTip
-                    moreInfo.TextColor3 = themeList.TextColor
-                    moreInfo.TextSize = 14.000
-                    moreInfo.TextXAlignment = Enum.TextXAlignment.Left
-    
-                    UICorner.CornerRadius = UDim.new(0, 4)
-                    UICorner.Parent = moreInfo
-
-                    local ms = game.Players.LocalPlayer:GetMouse()
-
-                    if themeList.SchemeColor == Color3.fromRGB(255,255,255) then
-                        Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(0,0,0)}, 0.2)
-                    end 
-                    if themeList.SchemeColor == Color3.fromRGB(0,0,0) then
-                        Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(255,255,255)}, 0.2)
-                    end 
-
-                    local btn = toggleElement
-                    local sample = Sample
-                    local img = toggleEnabled
-                    local infBtn = viewInfo
-
-                                    updateSectionFrame()
-                UpdateSize()
-
-                    btn.MouseButton1Click:Connect(function()
-                        if not focusing then
-                            if toggled == false then
-                                game.TweenService:Create(img, TweenInfo.new(0.11, Enum.EasingStyle.Linear,Enum.EasingDirection.In), {
-                                    ImageTransparency = 0
-                                }):Play()
-                                local c = sample:Clone()
-                                c.Parent = btn
-                                local x, y = (ms.X - c.AbsolutePosition.X), (ms.Y - c.AbsolutePosition.Y)
-                                c.Position = UDim2.new(0, x, 0, y)
-                                local len, size = 0.35, nil
-                                if btn.AbsoluteSize.X >= btn.AbsoluteSize.Y then
-                                    size = (btn.AbsoluteSize.X * 1.5)
+            local function v167()
+                local v238 = 0
+                local v239
+                while true do
+                    if (v238 == 0) then
+                        v239 = 0
+                        while true do
+                            if (v239 == (585 - (352 + 233))) then
+                                v160 = not v160
+                                if v160 then
+                                    v164 = v159.Character.HumanoidRootPart.Position
+                                    v166("Auto Farm: Enabled", 2.5 - 1)
+                                    task.spawn(
+                                        function()
+                                            while v160 do
+                                                local v402 = 0
+                                                local v403
+                                                while true do
+                                                    if (v402 == 0) then
+                                                        v403 = 0
+                                                        while true do
+                                                            if (v403 == 0) then
+                                                                if v161 then
+                                                                    local v447 = 574 - (489 + 85)
+                                                                    local v448
+                                                                    while true do
+                                                                        if (v447 == 0) then
+                                                                            v448 = 1501 - (277 + 1224)
+                                                                            while true do
+                                                                                if (v448 == (1493 - (663 + 830))) then
+                                                                                    v161.events.shake:FireServer()
+                                                                                    print("Shaking rod...")
+                                                                                    break
+                                                                                end
+                                                                            end
+                                                                            break
+                                                                        end
+                                                                    end
+                                                                end
+                                                                task.wait(0.1 + 0)
+                                                                break
+                                                            end
+                                                        end
+                                                        break
+                                                    end
+                                                end
+                                            end
+                                        end
+                                    )
                                 else
-                                    size = (btn.AbsoluteSize.Y * 1.5)
+                                    local v375 = 0
+                                    while true do
+                                        if (v375 == 0) then
+                                            v163 = false
+                                            v162 = false
+                                            v375 = 1
+                                        end
+                                        if (v375 == 2) then
+                                            v166("Auto Farm: Disabled", 2.5 - 1)
+                                            break
+                                        end
+                                        if (v375 == (876 - (461 + 414))) then
+                                            v155.SelectedObject = nil
+                                            if v161 then
+                                                v161.events.reset:FireServer()
+                                            end
+                                            v375 = 1
+                                        end
+                                    end
                                 end
-                                c:TweenSizeAndPosition(UDim2.new(0, size, 0, size), UDim2.new(0.5, (-size / 2), 0.5, (-size / 2)), 'Out', 'Quad', len, true, nil)
-                                for i = 1, 10 do
-                                    c.ImageTransparency = c.ImageTransparency + 0.05
-                                    wait(len / 12)
+                                break
+                            end
+                        end
+                        break
+                    end
+                end
+            end
+            v159.Character.ChildAdded:Connect(
+                function(v240)
+                    if (v240:IsA("Tool") and v240.Name:lower():find("rod")) then
+                        v161 = v240
+                    end
+                end
+            )
+            v159.Character.ChildRemoved:Connect(
+                function(v241)
+                    if (v241 == v161) then
+                        v160 = false
+                        v163 = false
+                        v162 = false
+                        v161 = nil
+                        v155.SelectedObject = nil
+                    end
+                end
+            )
+            v159.PlayerGui.DescendantAdded:Connect(
+                function(v242)
+                    if v160 then
+                        if ((v242.Name == "button") and (v242.Parent.Name == "safezone")) then
+                            local v310 = 0
+                            local v311
+                            while true do
+                                if (v310 == 0) then
+                                    v311 = 0
+                                    while true do
+                                        if (v311 == 1) then
+                                            v157:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
+                                            v157:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
+                                            v311 = 2 + 0
+                                        end
+                                        if (v311 == 2) then
+                                            task.wait(250.1 - (172 + 78))
+                                            v155.SelectedObject = nil
+                                            break
+                                        end
+                                        if ((0) == v311) then
+                                            task.wait(0.3)
+                                            v155.SelectedObject = v242
+                                            v311 = 1 + 0
+                                        end
+                                    end
+                                    break
                                 end
-                                c:Destroy()
-                            else
-                                game.TweenService:Create(img, TweenInfo.new(0.11, Enum.EasingStyle.Linear,Enum.EasingDirection.In), {
-                                    ImageTransparency = 1
-                                }):Play()
-                                local c = sample:Clone()
-                                c.Parent = btn
-                                local x, y = (ms.X - c.AbsolutePosition.X), (ms.Y - c.AbsolutePosition.Y)
-                                c.Position = UDim2.new(0, x, 0, y)
-                                local len, size = 0.35, nil
-                                if btn.AbsoluteSize.X >= btn.AbsoluteSize.Y then
-                                    size = (btn.AbsoluteSize.X * 1.5)
+                            end
+                        elseif ((v242.Name == "playerbar") and (v242.Parent.Name == "bar")) then
+                            local v337 = 0
+                            while true do
+                                if (v337 == 1) then
+                                    v156.events.reelfinished:FireServer(100, true)
+                                    v165 = v165 + 1 + 0
+                                    break
+                                end
+                                if (v337 == 0) then
+                                    v163 = true
+                                    v242:GetPropertyChangedSignal("Position"):Wait()
+                                    v337 = 1 - 0
+                                end
+                            end
+                        end
+                    end
+                end
+            )
+            v159.PlayerGui.DescendantRemoving:Connect(
+                function(v243)
+                    if (v243.Name == "reel") then
+                        local v275 = 0
+                        local v276
+                        while true do
+                            if (v275 == 0) then
+                                v276 = 0
+                                while true do
+                                    if ((0) == v276) then
+                                        v163 = false
+                                        v162 = false
+                                        break
+                                    end
+                                end
+                                break
+                            end
+                        end
+                    end
+                end
+            )
+            task.spawn(
+                function()
+                    while true do
+                        local v258 = 0
+                        local v259
+                        while true do
+                            if (v258 == 0) then
+                                v259 = 0
+                                while true do
+                                    if ((0) == v259) then
+                                        if (v160 and not v162) then
+                                            if v161 then
+                                                v162 = true
+                                                task.wait(0.5 + 0)
+                                                v161.events.reset:FireServer()
+                                                v161.events.cast:FireServer(58.5 + 42)
+                                            end
+                                        end
+                                        task.wait()
+                                        break
+                                    end
+                                end
+                                break
+                            end
+                        end
+                    end
+                end
+            )
+            task.spawn(
+                function()
+                    while true do
+                        local v260 = 447 - (133 + 314)
+                        local v261
+                        while true do
+                            if (v260 == 0) then
+                                v261 = 0
+                                while true do
+                                    if (0 == v261) then
+                                        if v160 then
+                                            v159.Character.HumanoidRootPart.Position = v164
+                                        end
+                                        task.wait(0.75 + 0)
+                                        break
+                                    end
+                                end
+                                break
+                            end
+                        end
+                    end
+                end
+            )
+            v152:Button(
+                "Enable/Disable",
+                function()
+                    v167()
+                end
+            )
+            local v168 =
+                v152:Label("Auto Farm Status: OFF", Color3.fromRGB(468 - (199 + 14), 590 - 425, 1549 - (647 + 902)))
+            local v169 = v152:Label("Catches: 0", Color3.fromRGB(381 - 254, 376 - (85 + 148), 1455 - (426 + 863)))
+            task.spawn(
+                function()
+                    while true do
+                        local v262 = 0
+                        while true do
+                            if ((1655 - (873 + 781)) == v262) then
+                                task.wait(1)
+                                break
+                            end
+                            if (v262 == 0) then
+                                if v160 then
+                                    v168.Text = "Auto Farm Status: ON"
                                 else
-                                    size = (btn.AbsoluteSize.Y * 1.5)
+                                    v168.Text = "Auto Farm Status: OFF"
                                 end
-                                c:TweenSizeAndPosition(UDim2.new(0, size, 0, size), UDim2.new(0.5, (-size / 2), 0.5, (-size / 2)), 'Out', 'Quad', len, true, nil)
-                                for i = 1, 10 do
-                                    c.ImageTransparency = c.ImageTransparency + 0.05
-                                    wait(len / 12)
-                                end
-                                c:Destroy()
-                            end
-                            toggled = not toggled
-                            pcall(callback, toggled)
-                        else
-                            for i,v in next, infoContainer:GetChildren() do
-                                Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                                focusing = false
-                            end
-                            Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
-                        end
-                    end)
-                    local hovering = false
-                    btn.MouseEnter:Connect(function()
-                        if not focusing then
-                            game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                                BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 8, themeList.ElementColor.g * 255 + 9, themeList.ElementColor.b * 255 + 10)
-                            }):Play()
-                            hovering = true
-                        end 
-                    end)
-                    btn.MouseLeave:Connect(function()
-                        if not focusing then
-                            game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                                BackgroundColor3 = themeList.ElementColor
-                            }):Play()
-                            hovering = false
-                        end
-                    end)
-
-                    coroutine.wrap(function()
-                        while wait() do
-                            if not hovering then
-                                toggleElement.BackgroundColor3 = themeList.ElementColor
-                            end
-                            toggleDisabled.ImageColor3 = themeList.SchemeColor
-                            toggleEnabled.ImageColor3 = themeList.SchemeColor
-                            togName.TextColor3 = themeList.TextColor
-                            viewInfo.ImageColor3 = themeList.SchemeColor
-                            Sample.ImageColor3 = themeList.SchemeColor
-                            moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
-                            moreInfo.TextColor3 = themeList.TextColor
-                        end
-                    end)()
-                    viewInfo.MouseButton1Click:Connect(function()
-                        if not viewDe then
-                            viewDe = true
-                            focusing = true
-                            for i,v in next, infoContainer:GetChildren() do
-                                if v ~= moreInfo then
-                                    Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                                end
-                            end
-                            Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,0,0)}, 0.2)
-                            Utility:TweenObject(blurFrame, {BackgroundTransparency = 0.5}, 0.2)
-                            Utility:TweenObject(btn, {BackgroundColor3 = themeList.ElementColor}, 0.2)
-                            wait(1.5)
-                            focusing = false
-                            Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                            Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
-                            wait(0)
-                            viewDe = false
-                        end
-                    end)
-                    function TogFunction:UpdateToggle(newText, isTogOn)
-                        isTogOn = isTogOn or toggle
-                        if newText ~= nil then 
-                            togName.Text = newText
-                        end
-                        if isTogOn then
-                            toggled = true
-                            game.TweenService:Create(img, TweenInfo.new(0.11, Enum.EasingStyle.Linear,Enum.EasingDirection.In), {
-                                ImageTransparency = 0
-                            }):Play()
-                            pcall(callback, toggled)
-                        else
-                            toggled = false
-                            game.TweenService:Create(img, TweenInfo.new(0.11, Enum.EasingStyle.Linear,Enum.EasingDirection.In), {
-                                ImageTransparency = 1
-                            }):Play()
-                            pcall(callback, toggled)
-                        end
-                    end
-                    return TogFunction
-            end
-
-            function Elements:NewSlider(slidInf, slidTip, maxvalue, minvalue, callback)
-                slidInf = slidInf or "Slider"
-                slidTip = slidTip or "Slider tip here"
-                maxvalue = maxvalue or 500
-                minvalue = minvalue or 16
-                callback = callback or function() end
-
-                local sliderElement = Instance.new("TextButton")
-                local UICorner = Instance.new("UICorner")
-                local togName = Instance.new("TextLabel")
-                local viewInfo = Instance.new("ImageButton")
-                local sliderBtn = Instance.new("TextButton")
-                local UICorner_2 = Instance.new("UICorner")
-                local UIListLayout = Instance.new("UIListLayout")
-                local sliderDrag = Instance.new("Frame")
-                local UICorner_3 = Instance.new("UICorner")
-                local write = Instance.new("ImageLabel")
-                local val = Instance.new("TextLabel")
-
-                sliderElement.Name = "sliderElement"
-                sliderElement.Parent = sectionInners
-                sliderElement.BackgroundColor3 = themeList.ElementColor
-                sliderElement.ClipsDescendants = true
-                sliderElement.Size = UDim2.new(0, 352, 0, 33)
-                sliderElement.AutoButtonColor = false
-                sliderElement.Font = Enum.Font.SourceSans
-                sliderElement.Text = ""
-                sliderElement.TextColor3 = Color3.fromRGB(0, 0, 0)
-                sliderElement.TextSize = 14.000
-
-                UICorner.CornerRadius = UDim.new(0, 4)
-                UICorner.Parent = sliderElement
-
-                togName.Name = "togName"
-                togName.Parent = sliderElement
-                togName.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                togName.BackgroundTransparency = 1.000
-                togName.Position = UDim2.new(0.096704483, 0, 0.272727281, 0)
-                togName.Size = UDim2.new(0, 138, 0, 14)
-                togName.Font = Enum.Font.GothamSemibold
-                togName.Text = slidInf
-                togName.RichText = true
-                togName.TextColor3 = themeList.TextColor
-                togName.TextSize = 14.000
-                togName.TextXAlignment = Enum.TextXAlignment.Left
-
-                viewInfo.Name = "viewInfo"
-                viewInfo.Parent = sliderElement
-                viewInfo.BackgroundTransparency = 1.000
-                viewInfo.LayoutOrder = 9
-                viewInfo.Position = UDim2.new(0.930000007, 0, 0.151999995, 0)
-                viewInfo.Size = UDim2.new(0, 23, 0, 23)
-                viewInfo.ZIndex = 2
-                viewInfo.Image = "rbxassetid://3926305904"
-                viewInfo.ImageColor3 = themeList.SchemeColor
-                viewInfo.ImageRectOffset = Vector2.new(764, 764)
-                viewInfo.ImageRectSize = Vector2.new(36, 36)
-
-                sliderBtn.Name = "sliderBtn"
-                sliderBtn.Parent = sliderElement
-                sliderBtn.BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 5, themeList.ElementColor.g * 255 + 5, themeList.ElementColor.b * 255  + 5)
-                sliderBtn.BorderSizePixel = 0
-                sliderBtn.Position = UDim2.new(0.488749951, 0, 0.393939406, 0)
-                sliderBtn.Size = UDim2.new(0, 149, 0, 6)
-                sliderBtn.AutoButtonColor = false
-                sliderBtn.Font = Enum.Font.SourceSans
-                sliderBtn.Text = ""
-                sliderBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
-                sliderBtn.TextSize = 14.000
-                sliderBtn.Active = true  -- Enable touch input
-
-                UICorner_2.Parent = sliderBtn
-
-                UIListLayout.Parent = sliderBtn
-                UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-                UIListLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-
-                sliderDrag.Name = "sliderDrag"
-                sliderDrag.Parent = sliderBtn
-                sliderDrag.BackgroundColor3 = themeList.SchemeColor
-                sliderDrag.BorderColor3 = Color3.fromRGB(74, 99, 135)
-                sliderDrag.BorderSizePixel = 0
-                sliderDrag.Size = UDim2.new(0, 0, 1, 0)  -- Start at 0 position
-
-                UICorner_3.Parent = sliderDrag
-
-                write.Name = "write"
-                write.Parent = sliderElement
-                write.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                write.BackgroundTransparency = 1.000
-                write.BorderColor3 = Color3.fromRGB(27, 42, 53)
-                write.Position = UDim2.new(0.0199999996, 0, 0.180000007, 0)
-                write.Size = UDim2.new(0, 21, 0, 21)
-                write.Image = "rbxassetid://3926307971"
-                write.ImageColor3 = themeList.SchemeColor
-                write.ImageRectOffset = Vector2.new(404, 164)
-                write.ImageRectSize = Vector2.new(36, 36)
-
-                val.Name = "val"
-                val.Parent = sliderElement
-                val.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                val.BackgroundTransparency = 1.000
-                val.Position = UDim2.new(0.352386296, 0, 0.272727281, 0)
-                val.Size = UDim2.new(0, 41, 0, 14)
-                val.Font = Enum.Font.GothamSemibold
-                val.Text = tostring(minvalue)
-                val.TextColor3 = themeList.TextColor
-                val.TextSize = 14.000
-                val.TextTransparency = 1.000
-                val.TextXAlignment = Enum.TextXAlignment.Right
-
-                local moreInfo = Instance.new("TextLabel")
-                local UICorner = Instance.new("UICorner")
-
-                moreInfo.Name = "TipMore"
-                moreInfo.Parent = infoContainer
-                moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
-                moreInfo.Position = UDim2.new(0, 0, 2, 0)
-                moreInfo.Size = UDim2.new(0, 353, 0, 33)
-                moreInfo.ZIndex = 9
-                moreInfo.Font = Enum.Font.GothamSemibold
-                moreInfo.Text = "  "..slidTip
-                moreInfo.TextColor3 = themeList.TextColor
-                moreInfo.TextSize = 14.000
-                moreInfo.RichText = true
-                moreInfo.TextXAlignment = Enum.TextXAlignment.Left
-
-                UICorner.CornerRadius = UDim.new(0, 4)
-                UICorner.Parent = moreInfo
-
-                if themeList.SchemeColor == Color3.fromRGB(255,255,255) then
-                    Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(0,0,0)}, 0.2)
-                end 
-                if themeList.SchemeColor == Color3.fromRGB(0,0,0) then
-                    Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(255,255,255)}, 0.2)
-                end 
-
-
-                                updateSectionFrame()
-                UpdateSize()
-                local mouse = game:GetService("Players").LocalPlayer:GetMouse();
-
-                local ms = game.Players.LocalPlayer:GetMouse()
-                local uis = game:GetService("UserInputService")
-                local btn = sliderElement
-                local infBtn = viewInfo
-                local hovering = false
-                btn.MouseEnter:Connect(function()
-                    if not focusing then
-                        game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 8, themeList.ElementColor.g * 255 + 9, themeList.ElementColor.b * 255 + 10)
-                        }):Play()
-                        hovering = true
-                    end 
-                end)
-                btn.MouseLeave:Connect(function()
-                    if not focusing then
-                        game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            BackgroundColor3 = themeList.ElementColor
-                        }):Play()
-                        hovering = false
-                    end
-                end)        
-
-                coroutine.wrap(function()
-                    while wait() do
-                        if not hovering then
-                            sliderElement.BackgroundColor3 = themeList.ElementColor
-                        end
-                        moreInfo.TextColor3 = themeList.TextColor
-                        moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
-                        val.TextColor3 = themeList.TextColor
-                        write.ImageColor3 = themeList.SchemeColor
-                        togName.TextColor3 = themeList.TextColor
-                        viewInfo.ImageColor3 = themeList.SchemeColor
-                        sliderBtn.BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 5, themeList.ElementColor.g * 255 + 5, themeList.ElementColor.b * 255  + 5)
-                        sliderDrag.BackgroundColor3 = themeList.SchemeColor
-                    end
-                end)()
-
-                local Value = minvalue or 0
-                local moveconnection = nil
-                local releaseconnection = nil
-                local mouse = game.Players.LocalPlayer:GetMouse()
-                local uis = game:GetService("UserInputService")
-                
-                -- Initialize with default value
-                pcall(function()
-                    callback(Value)
-                end)
-                
-                -- Touch and Mouse compatible slider
-                local isSliding = false
-                local currentInput = nil
-                
-                sliderBtn.InputBegan:Connect(function(input)
-                    if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and not focusing then
-                        isSliding = true
-                        currentInput = input
-                        
-                        game.TweenService:Create(val, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            TextTransparency = 0
-                        }):Play()
-                        
-                        local function updateSlider(inputPos)
-                            local percentage = math.clamp((inputPos.X - sliderBtn.AbsolutePosition.X) / sliderBtn.AbsoluteSize.X, 0, 1)
-                            Value = math.floor(((maxvalue - minvalue) * percentage) + minvalue)
-                            val.Text = tostring(Value)
-                            sliderDrag.Size = UDim2.new(percentage, 0, 1, 0)
-                            pcall(function()
-                                callback(Value)
-                            end)
-                        end
-                        
-                        -- Initial update
-                        updateSlider(input.Position)
-                        
-                        -- Connect to input changes
-                        if moveconnection then moveconnection:Disconnect() end
-                        if releaseconnection then releaseconnection:Disconnect() end
-                        
-                        moveconnection = uis.InputChanged:Connect(function(changedInput)
-                            if changedInput == currentInput and isSliding then
-                                updateSlider(changedInput.Position)
-                            end
-                        end)
-                        
-                        releaseconnection = uis.InputEnded:Connect(function(endedInput)
-                            if endedInput == currentInput then
-                                isSliding = false
-                                game.TweenService:Create(val, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                                    TextTransparency = 1
-                                }):Play()
-                                if moveconnection then moveconnection:Disconnect() end
-                                if releaseconnection then releaseconnection:Disconnect() end
-                                moveconnection = nil
-                                releaseconnection = nil
-                                currentInput = nil
-                            end
-                        end)
-                    end
-                end)
-                viewInfo.MouseButton1Click:Connect(function()
-                    if not viewDe then
-                        viewDe = true
-                        focusing = true
-                        for i,v in next, infoContainer:GetChildren() do
-                            if v ~= moreInfo then
-                                Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
+                                v169.Text = "Fishes Catches: " .. v165
+                                v262 = 2 - 1
                             end
                         end
-                        Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,0,0)}, 0.2)
-                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 0.5}, 0.2)
-                        Utility:TweenObject(btn, {BackgroundColor3 = themeList.ElementColor}, 0.2)
-                        wait(1.5)
-                        focusing = false
-                        Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
-                        wait(0)
-                        viewDe = false
-                    end
-                end)        
-            end
-
-            function Elements:NewDropdown(dropname, dropinf, list, callback)
-                local DropFunction = {}
-                dropname = dropname or "Dropdown"
-                list = list or {}
-                dropinf = dropinf or "Dropdown info"
-                callback = callback or function() end   
-
-                local opened = false
-                local DropYSize = 33
-
-
-                local dropFrame = Instance.new("Frame")
-                local dropOpen = Instance.new("TextButton")
-                local listImg = Instance.new("ImageLabel")
-                local itemTextbox = Instance.new("TextLabel")
-                local viewInfo = Instance.new("ImageButton")
-                local UICorner = Instance.new("UICorner")
-                local UIListLayout = Instance.new("UIListLayout")
-                local Sample = Instance.new("ImageLabel")
-
-                local ms = game.Players.LocalPlayer:GetMouse()
-                Sample.Name = "Sample"
-                Sample.Parent = dropOpen
-                Sample.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                Sample.BackgroundTransparency = 1.000
-                Sample.Image = "http://www.roblox.com/asset/?id=4560909609"
-                Sample.ImageColor3 = themeList.SchemeColor
-                Sample.ImageTransparency = 0.600
-                
-                dropFrame.Name = "dropFrame"
-                dropFrame.Parent = sectionInners
-                dropFrame.BackgroundColor3 = themeList.Background
-                dropFrame.BorderSizePixel = 0
-                dropFrame.Position = UDim2.new(0, 0, 1.23571432, 0)
-                dropFrame.Size = UDim2.new(0, 352, 0, 33)
-                dropFrame.ClipsDescendants = true
-                local sample = Sample
-                local btn = dropOpen
-                dropOpen.Name = "dropOpen"
-                dropOpen.Parent = dropFrame
-                dropOpen.BackgroundColor3 = themeList.ElementColor
-                dropOpen.Size = UDim2.new(0, 352, 0, 33)
-                dropOpen.AutoButtonColor = false
-                dropOpen.Font = Enum.Font.SourceSans
-                dropOpen.Text = ""
-                dropOpen.TextColor3 = Color3.fromRGB(0, 0, 0)
-                dropOpen.TextSize = 14.000
-                dropOpen.ClipsDescendants = true
-                dropOpen.MouseButton1Click:Connect(function()
-                    if not focusing then
-                        if opened then
-                            opened = false
-                            dropFrame:TweenSize(UDim2.new(0, 352, 0, 33), "InOut", "Linear", 0.08)
-                            wait(0.1)
-                            updateSectionFrame()
-                            UpdateSize()
-                            local c = sample:Clone()
-                            c.Parent = btn
-                            local x, y = (ms.X - c.AbsolutePosition.X), (ms.Y - c.AbsolutePosition.Y)
-                            c.Position = UDim2.new(0, x, 0, y)
-                            local len, size = 0.35, nil
-                            if btn.AbsoluteSize.X >= btn.AbsoluteSize.Y then
-                                size = (btn.AbsoluteSize.X * 1.5)
-                            else
-                                size = (btn.AbsoluteSize.Y * 1.5)
-                            end
-                            c:TweenSizeAndPosition(UDim2.new(0, size, 0, size), UDim2.new(0.5, (-size / 2), 0.5, (-size / 2)), 'Out', 'Quad', len, true, nil)
-                            for i = 1, 10 do
-                                c.ImageTransparency = c.ImageTransparency + 0.05
-                                wait(len / 12)
-                            end
-                            c:Destroy()
-                        else
-                            opened = true
-                            dropFrame:TweenSize(UDim2.new(0, 352, 0, UIListLayout.AbsoluteContentSize.Y), "InOut", "Linear", 0.08, true)
-                            wait(0.1)
-                            updateSectionFrame()
-                            UpdateSize()
-                            local c = sample:Clone()
-                            c.Parent = btn
-                            local x, y = (ms.X - c.AbsolutePosition.X), (ms.Y - c.AbsolutePosition.Y)
-                            c.Position = UDim2.new(0, x, 0, y)
-                            local len, size = 0.35, nil
-                            if btn.AbsoluteSize.X >= btn.AbsoluteSize.Y then
-                                size = (btn.AbsoluteSize.X * 1.5)
-                            else
-                                size = (btn.AbsoluteSize.Y * 1.5)
-                            end
-                            c:TweenSizeAndPosition(UDim2.new(0, size, 0, size), UDim2.new(0.5, (-size / 2), 0.5, (-size / 2)), 'Out', 'Quad', len, true, nil)
-                            for i = 1, 10 do
-                                c.ImageTransparency = c.ImageTransparency + 0.05
-                                wait(len / 12)
-                            end
-                            c:Destroy()
-                        end
-                    else
-                        for i,v in next, infoContainer:GetChildren() do
-                            Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                            focusing = false
-                        end
-                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
-                    end
-                end)
-
-                listImg.Name = "listImg"
-                listImg.Parent = dropOpen
-                listImg.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                listImg.BackgroundTransparency = 1.000
-                listImg.BorderColor3 = Color3.fromRGB(27, 42, 53)
-                listImg.Position = UDim2.new(0.0199999996, 0, 0.180000007, 0)
-                listImg.Size = UDim2.new(0, 21, 0, 21)
-                listImg.Image = "rbxassetid://3926305904"
-                listImg.ImageColor3 = themeList.SchemeColor
-                listImg.ImageRectOffset = Vector2.new(644, 364)
-                listImg.ImageRectSize = Vector2.new(36, 36)
-
-                itemTextbox.Name = "itemTextbox"
-                itemTextbox.Parent = dropOpen
-                itemTextbox.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                itemTextbox.BackgroundTransparency = 1.000
-                itemTextbox.Position = UDim2.new(0.0970000029, 0, 0.273000002, 0)
-                itemTextbox.Size = UDim2.new(0, 138, 0, 14)
-                itemTextbox.Font = Enum.Font.GothamSemibold
-                itemTextbox.Text = dropname
-                itemTextbox.RichText = true
-                itemTextbox.TextColor3 = themeList.TextColor
-                itemTextbox.TextSize = 14.000
-                itemTextbox.TextXAlignment = Enum.TextXAlignment.Left
-
-                viewInfo.Name = "viewInfo"
-                viewInfo.Parent = dropOpen
-                viewInfo.BackgroundTransparency = 1.000
-                viewInfo.LayoutOrder = 9
-                viewInfo.Position = UDim2.new(0.930000007, 0, 0.151999995, 0)
-                viewInfo.Size = UDim2.new(0, 23, 0, 23)
-                viewInfo.ZIndex = 2
-                viewInfo.Image = "rbxassetid://3926305904"
-                viewInfo.ImageColor3 = themeList.SchemeColor
-                viewInfo.ImageRectOffset = Vector2.new(764, 764)
-                viewInfo.ImageRectSize = Vector2.new(36, 36)
-
-                UICorner.CornerRadius = UDim.new(0, 4)
-                UICorner.Parent = dropOpen
-
-                local Sample = Instance.new("ImageLabel")
-
-                Sample.Name = "Sample"
-                Sample.Parent = dropOpen
-                Sample.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                Sample.BackgroundTransparency = 1.000
-                Sample.Image = "http://www.roblox.com/asset/?id=4560909609"
-                Sample.ImageColor3 = themeList.SchemeColor
-                Sample.ImageTransparency = 0.600
-
-                UIListLayout.Parent = dropFrame
-                UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-                UIListLayout.Padding = UDim.new(0, 3)
-
-                updateSectionFrame() 
-                UpdateSize()
-
-                local ms = game.Players.LocalPlayer:GetMouse()
-                local uis = game:GetService("UserInputService")
-                local infBtn = viewInfo
-
-                local moreInfo = Instance.new("TextLabel")
-                local UICorner = Instance.new("UICorner")
-
-                moreInfo.Name = "TipMore"
-                moreInfo.Parent = infoContainer
-                moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
-                moreInfo.Position = UDim2.new(0, 0, 2, 0)
-                moreInfo.Size = UDim2.new(0, 353, 0, 33)
-                moreInfo.ZIndex = 9
-                moreInfo.RichText = true
-                moreInfo.Font = Enum.Font.GothamSemibold
-                moreInfo.Text = "  "..dropinf
-                moreInfo.TextColor3 = themeList.TextColor
-                moreInfo.TextSize = 14.000
-                moreInfo.TextXAlignment = Enum.TextXAlignment.Left
-
-                local hovering = false
-                btn.MouseEnter:Connect(function()
-                    if not focusing then
-                        game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 8, themeList.ElementColor.g * 255 + 9, themeList.ElementColor.b * 255 + 10)
-                        }):Play()
-                        hovering = true
-                    end 
-                end)
-                btn.MouseLeave:Connect(function()
-                    if not focusing then
-                        game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            BackgroundColor3 = themeList.ElementColor
-                        }):Play()
-                        hovering = false
-                    end
-                end)        
-                coroutine.wrap(function()
-                    while wait() do
-                        if not hovering then
-                            dropOpen.BackgroundColor3 = themeList.ElementColor
-                        end
-                        Sample.ImageColor3 = themeList.SchemeColor
-                        dropFrame.BackgroundColor3 = themeList.Background
-                        listImg.ImageColor3 = themeList.SchemeColor
-                        itemTextbox.TextColor3 = themeList.TextColor
-                        viewInfo.ImageColor3 = themeList.SchemeColor
-                        moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
-                        moreInfo.TextColor3 = themeList.TextColor
-                    end
-                end)()
-                UICorner.CornerRadius = UDim.new(0, 4)
-                UICorner.Parent = moreInfo
-
-                if themeList.SchemeColor == Color3.fromRGB(255,255,255) then
-                    Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(0,0,0)}, 0.2)
-                end 
-                if themeList.SchemeColor == Color3.fromRGB(0,0,0) then
-                    Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(255,255,255)}, 0.2)
-                end 
-
-                viewInfo.MouseButton1Click:Connect(function()
-                    if not viewDe then
-                        viewDe = true
-                        focusing = true
-                        for i,v in next, infoContainer:GetChildren() do
-                            if v ~= moreInfo then
-                                Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                            end
-                        end
-                        Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,0,0)}, 0.2)
-                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 0.5}, 0.2)
-                        Utility:TweenObject(btn, {BackgroundColor3 = themeList.ElementColor}, 0.2)
-                        wait(1.5)
-                        focusing = false
-                        Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
-                        wait(0)
-                        viewDe = false
-                    end
-                end)     
-
-                for i,v in next, list do
-                    local optionSelect = Instance.new("TextButton")
-                    local UICorner_2 = Instance.new("UICorner")
-                    local Sample1 = Instance.new("ImageLabel")
-
-                    local ms = game.Players.LocalPlayer:GetMouse()
-                    Sample1.Name = "Sample1"
-                    Sample1.Parent = optionSelect
-                    Sample1.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                    Sample1.BackgroundTransparency = 1.000
-                    Sample1.Image = "http://www.roblox.com/asset/?id=4560909609"
-                    Sample1.ImageColor3 = themeList.SchemeColor
-                    Sample1.ImageTransparency = 0.600
-
-                    local sample1 = Sample1
-                    DropYSize = DropYSize + 33
-                    optionSelect.Name = "optionSelect"
-                    optionSelect.Parent = dropFrame
-                    optionSelect.BackgroundColor3 = themeList.ElementColor
-                    optionSelect.Position = UDim2.new(0, 0, 0.235294119, 0)
-                    optionSelect.Size = UDim2.new(0, 352, 0, 33)
-                    optionSelect.AutoButtonColor = false
-                    optionSelect.Font = Enum.Font.GothamSemibold
-                    optionSelect.Text = "  "..v
-                    optionSelect.TextColor3 = Color3.fromRGB(themeList.TextColor.r * 255 - 6, themeList.TextColor.g * 255 - 6, themeList.TextColor.b * 255 - 6)
-                    optionSelect.TextSize = 14.000
-                    optionSelect.TextXAlignment = Enum.TextXAlignment.Left
-                    optionSelect.ClipsDescendants = true
-                    optionSelect.MouseButton1Click:Connect(function()
-                        if not focusing then
-                            opened = false
-                            callback(v)
-                            itemTextbox.Text = v
-                            dropFrame:TweenSize(UDim2.new(0, 352, 0, 33), 'InOut', 'Linear', 0.08)
-                            wait(0.1)
-                            updateSectionFrame()
-                            UpdateSize()
-                            local c = sample1:Clone()
-                            c.Parent = optionSelect
-                            local x, y = (ms.X - c.AbsolutePosition.X), (ms.Y - c.AbsolutePosition.Y)
-                            c.Position = UDim2.new(0, x, 0, y)
-                            local len, size = 0.35, nil
-                            if optionSelect.AbsoluteSize.X >= optionSelect.AbsoluteSize.Y then
-                                size = (optionSelect.AbsoluteSize.X * 1.5)
-                            else
-                                size = (optionSelect.AbsoluteSize.Y * 1.5)
-                            end
-                            c:TweenSizeAndPosition(UDim2.new(0, size, 0, size), UDim2.new(0.5, (-size / 2), 0.5, (-size / 2)), 'Out', 'Quad', len, true, nil)
-                            for i = 1, 10 do
-                                c.ImageTransparency = c.ImageTransparency + 0.05
-                                wait(len / 12)
-                            end
-                            c:Destroy()         
-                        else
-                            for i,v in next, infoContainer:GetChildren() do
-                                Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                                focusing = false
-                            end
-                            Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
-                        end
-                    end)
-    
-                    UICorner_2.CornerRadius = UDim.new(0, 4)
-                    UICorner_2.Parent = optionSelect
-
-                    local oHover = false
-                    optionSelect.MouseEnter:Connect(function()
-                        if not focusing then
-                            game.TweenService:Create(optionSelect, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                                BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 8, themeList.ElementColor.g * 255 + 9, themeList.ElementColor.b * 255 + 10)
-                            }):Play()
-                            oHover = true
-                        end 
-                    end)
-                    optionSelect.MouseLeave:Connect(function()
-                        if not focusing then
-                            game.TweenService:Create(optionSelect, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                                BackgroundColor3 = themeList.ElementColor
-                            }):Play()
-                            oHover = false
-                        end
-                    end)   
-                    coroutine.wrap(function()
-                        while wait() do
-                            if not oHover then
-                                optionSelect.BackgroundColor3 = themeList.ElementColor
-                            end
-                            optionSelect.TextColor3 = Color3.fromRGB(themeList.TextColor.r * 255 - 6, themeList.TextColor.g * 255 - 6, themeList.TextColor.b * 255 - 6)
-                            Sample1.ImageColor3 = themeList.SchemeColor
-                        end
-                    end)()
-                end
-
-                function DropFunction:Refresh(newList)
-                    newList = newList or {}
-                    for i,v in next, dropFrame:GetChildren() do
-                        if v.Name == "optionSelect" then
-                            v:Destroy()
-                        end
-                    end
-                    for i,v in next, newList do
-                        local optionSelect = Instance.new("TextButton")
-                        local UICorner_2 = Instance.new("UICorner")
-                        local Sample11 = Instance.new("ImageLabel")
-                        local ms = game.Players.LocalPlayer:GetMouse()
-                        Sample11.Name = "Sample11"
-                        Sample11.Parent = optionSelect
-                        Sample11.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                        Sample11.BackgroundTransparency = 1.000
-                        Sample11.Image = "http://www.roblox.com/asset/?id=4560909609"
-                        Sample11.ImageColor3 = themeList.SchemeColor
-                        Sample11.ImageTransparency = 0.600
-    
-                        local sample11 = Sample11
-                        DropYSize = DropYSize + 33
-                        optionSelect.Name = "optionSelect"
-                        optionSelect.Parent = dropFrame
-                        optionSelect.BackgroundColor3 = themeList.ElementColor
-                        optionSelect.Position = UDim2.new(0, 0, 0.235294119, 0)
-                        optionSelect.Size = UDim2.new(0, 352, 0, 33)
-                        optionSelect.AutoButtonColor = false
-                        optionSelect.Font = Enum.Font.GothamSemibold
-                        optionSelect.Text = "  "..v
-                        optionSelect.TextColor3 = Color3.fromRGB(themeList.TextColor.r * 255 - 6, themeList.TextColor.g * 255 - 6, themeList.TextColor.b * 255 - 6)
-                        optionSelect.TextSize = 14.000
-                        optionSelect.TextXAlignment = Enum.TextXAlignment.Left
-                        optionSelect.ClipsDescendants = true
-                        UICorner_2.CornerRadius = UDim.new(0, 4)
-                        UICorner_2.Parent = optionSelect
-                        optionSelect.MouseButton1Click:Connect(function()
-                            if not focusing then
-                                opened = false
-                                callback(v)
-                                itemTextbox.Text = v
-                                dropFrame:TweenSize(UDim2.new(0, 352, 0, 33), 'InOut', 'Linear', 0.08)
-                                wait(0.1)
-                                updateSectionFrame()
-                                UpdateSize()
-                                local c = sample11:Clone()
-                                c.Parent = optionSelect
-                                local x, y = (ms.X - c.AbsolutePosition.X), (ms.Y - c.AbsolutePosition.Y)
-                                c.Position = UDim2.new(0, x, 0, y)
-                                local len, size = 0.35, nil
-                                if optionSelect.AbsoluteSize.X >= optionSelect.AbsoluteSize.Y then
-                                    size = (optionSelect.AbsoluteSize.X * 1.5)
-                                else
-                                    size = (optionSelect.AbsoluteSize.Y * 1.5)
-                                end
-                                c:TweenSizeAndPosition(UDim2.new(0, size, 0, size), UDim2.new(0.5, (-size / 2), 0.5, (-size / 2)), 'Out', 'Quad', len, true, nil)
-                                for i = 1, 10 do
-                                    c.ImageTransparency = c.ImageTransparency + 0.05
-                                    wait(len / 12)
-                                end
-                                c:Destroy()         
-                            else
-                                for i,v in next, infoContainer:GetChildren() do
-                                    Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                                    focusing = false
-                                end
-                                Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
-                            end
-                        end)
-                                        updateSectionFrame()
-                UpdateSize()
-                        local hov = false
-                        optionSelect.MouseEnter:Connect(function()
-                            if not focusing then
-                                game.TweenService:Create(optionSelect, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                                    BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 8, themeList.ElementColor.g * 255 + 9, themeList.ElementColor.b * 255 + 10)
-                                }):Play()
-                                hov = true
-                            end 
-                        end)
-                        optionSelect.MouseLeave:Connect(function()
-                            if not focusing then
-                                game.TweenService:Create(optionSelect, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                                    BackgroundColor3 = themeList.ElementColor
-                                }):Play()
-                                hov = false
-                            end
-                        end)   
-                        coroutine.wrap(function()
-                            while wait() do
-                                if not oHover then
-                                    optionSelect.BackgroundColor3 = themeList.ElementColor
-                                end
-                                optionSelect.TextColor3 = Color3.fromRGB(themeList.TextColor.r * 255 - 6, themeList.TextColor.g * 255 - 6, themeList.TextColor.b * 255 - 6)
-                                Sample11.ImageColor3 = themeList.SchemeColor
-                            end
-                        end)()
-                    end
-                    if opened then 
-                        dropFrame:TweenSize(UDim2.new(0, 352, 0, UIListLayout.AbsoluteContentSize.Y), "InOut", "Linear", 0.08, true)
-                        wait(0.1)
-                        updateSectionFrame()
-                        UpdateSize()
-                    else
-                        dropFrame:TweenSize(UDim2.new(0, 352, 0, 33), "InOut", "Linear", 0.08)
-                        wait(0.1)
-                        updateSectionFrame()
-                        UpdateSize()
                     end
                 end
-                return DropFunction
-            end
-            function Elements:NewKeybind(keytext, keyinf, first, callback)
-                keytext = keytext or "KeybindText"
-                keyinf = keyinf or "KebindInfo"
-                callback = callback or function() end
-                local oldKey = first.Name
-                local keybindElement = Instance.new("TextButton")
-                local UICorner = Instance.new("UICorner")
-                local togName = Instance.new("TextLabel")
-                local viewInfo = Instance.new("ImageButton")
-                local touch = Instance.new("ImageLabel")
-                local Sample = Instance.new("ImageLabel")
-                local togName_2 = Instance.new("TextLabel")
-
-                local ms = game.Players.LocalPlayer:GetMouse()
-                local uis = game:GetService("UserInputService")
-                local infBtn = viewInfo
-
-                local moreInfo = Instance.new("TextLabel")
-                local UICorner1 = Instance.new("UICorner")
-
-                local sample = Sample
-
-                keybindElement.Name = "keybindElement"
-                keybindElement.Parent = sectionInners
-                keybindElement.BackgroundColor3 = themeList.ElementColor
-                keybindElement.ClipsDescendants = true
-                keybindElement.Size = UDim2.new(0, 352, 0, 33)
-                keybindElement.AutoButtonColor = false
-                keybindElement.Font = Enum.Font.SourceSans
-                keybindElement.Text = ""
-                keybindElement.TextColor3 = Color3.fromRGB(0, 0, 0)
-                keybindElement.TextSize = 14.000
-                keybindElement.MouseButton1Click:connect(function(e) 
-                    if not focusing then
-                        togName_2.Text = ". . ."
-                        local a, b = game:GetService('UserInputService').InputBegan:wait();
-                        if a.KeyCode.Name ~= "Unknown" then
-                            togName_2.Text = a.KeyCode.Name
-                            oldKey = a.KeyCode.Name;
-                        end
-                        local c = sample:Clone()
-                        c.Parent = keybindElement
-                        local x, y = (ms.X - c.AbsolutePosition.X), (ms.Y - c.AbsolutePosition.Y)
-                        c.Position = UDim2.new(0, x, 0, y)
-                        local len, size = 0.35, nil
-                        if keybindElement.AbsoluteSize.X >= keybindElement.AbsoluteSize.Y then
-                            size = (keybindElement.AbsoluteSize.X * 1.5)
-                        else
-                            size = (keybindElement.AbsoluteSize.Y * 1.5)
-                        end
-                        c:TweenSizeAndPosition(UDim2.new(0, size, 0, size), UDim2.new(0.5, (-size / 2), 0.5, (-size / 2)), 'Out', 'Quad', len, true, nil)
-                        for i = 1, 10 do
-                        c.ImageTransparency = c.ImageTransparency + 0.05
-                            wait(len / 12)
-                        end
-                    else
-                        for i,v in next, infoContainer:GetChildren() do
-                            Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                            focusing = false
-                        end
-                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
-                    end
-                end)
-        
-                game:GetService("UserInputService").InputBegan:connect(function(current, ok) 
-                    if not ok then 
-                        if current.KeyCode.Name == oldKey then 
-                            callback()
-                        end
-                    end
-                end)
-
-                moreInfo.Name = "TipMore"
-                moreInfo.Parent = infoContainer
-                moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
-                moreInfo.Position = UDim2.new(0, 0, 2, 0)
-                moreInfo.Size = UDim2.new(0, 353, 0, 33)
-                moreInfo.ZIndex = 9
-                moreInfo.RichText = true
-                moreInfo.Font = Enum.Font.GothamSemibold
-                moreInfo.Text = "  "..keyinf
-                moreInfo.TextColor3 = themeList.TextColor
-                moreInfo.TextSize = 14.000
-                moreInfo.TextXAlignment = Enum.TextXAlignment.Left
-
-                Sample.Name = "Sample"
-                Sample.Parent = keybindElement
-                Sample.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                Sample.BackgroundTransparency = 1.000
-                Sample.Image = "http://www.roblox.com/asset/?id=4560909609"
-                Sample.ImageColor3 = themeList.SchemeColor
-                Sample.ImageTransparency = 0.600
-
-                
-                togName.Name = "togName"
-                togName.Parent = keybindElement
-                togName.BackgroundColor3 = themeList.TextColor
-                togName.BackgroundTransparency = 1.000
-                togName.Position = UDim2.new(0.096704483, 0, 0.272727281, 0)
-                togName.Size = UDim2.new(0, 222, 0, 14)
-                togName.Font = Enum.Font.GothamSemibold
-                togName.Text = keytext
-                togName.RichText = true
-                togName.TextColor3 = themeList.TextColor
-                togName.TextSize = 14.000
-                togName.TextXAlignment = Enum.TextXAlignment.Left
-
-                viewInfo.Name = "viewInfo"
-                viewInfo.Parent = keybindElement
-                viewInfo.BackgroundTransparency = 1.000
-                viewInfo.LayoutOrder = 9
-                viewInfo.Position = UDim2.new(0.930000007, 0, 0.151999995, 0)
-                viewInfo.Size = UDim2.new(0, 23, 0, 23)
-                viewInfo.ZIndex = 2
-                viewInfo.Image = "rbxassetid://3926305904"
-                viewInfo.ImageColor3 = themeList.SchemeColor
-                viewInfo.ImageRectOffset = Vector2.new(764, 764)
-                viewInfo.ImageRectSize = Vector2.new(36, 36)
-                viewInfo.MouseButton1Click:Connect(function()
-                    if not viewDe then
-                        viewDe = true
-                        focusing = true
-                        for i,v in next, infoContainer:GetChildren() do
-                            if v ~= moreInfo then
-                                Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                            end
-                        end
-                        Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,0,0)}, 0.2)
-                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 0.5}, 0.2)
-                        Utility:TweenObject(keybindElement, {BackgroundColor3 = themeList.ElementColor}, 0.2)
-                        wait(1.5)
-                        focusing = false
-                        Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
-                        wait(0)
-                        viewDe = false
-                    end
-                end)  
-                                updateSectionFrame()
-                UpdateSize()
-                local oHover = false
-                keybindElement.MouseEnter:Connect(function()
-                    if not focusing then
-                        game.TweenService:Create(keybindElement, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 8, themeList.ElementColor.g * 255 + 9, themeList.ElementColor.b * 255 + 10)
-                        }):Play()
-                        oHover = true
-                    end 
-                end)
-                keybindElement.MouseLeave:Connect(function()
-                    if not focusing then
-                        game.TweenService:Create(keybindElement, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            BackgroundColor3 = themeList.ElementColor
-                        }):Play()
-                        oHover = false
-                    end
-                end)        
-
-                UICorner1.CornerRadius = UDim.new(0, 4)
-                UICorner1.Parent = moreInfo
-
-                if themeList.SchemeColor == Color3.fromRGB(255,255,255) then
-                    Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(0,0,0)}, 0.2)
-                end 
-                if themeList.SchemeColor == Color3.fromRGB(0,0,0) then
-                    Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(255,255,255)}, 0.2)
-                end 
-
-                UICorner.CornerRadius = UDim.new(0, 4)
-                UICorner.Parent = keybindElement
-
-                touch.Name = "touch"
-                touch.Parent = keybindElement
-                touch.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                touch.BackgroundTransparency = 1.000
-                touch.BorderColor3 = Color3.fromRGB(27, 42, 53)
-                touch.Position = UDim2.new(0.0199999996, 0, 0.180000007, 0)
-                touch.Size = UDim2.new(0, 21, 0, 21)
-                touch.Image = "rbxassetid://3926305904"
-                touch.ImageColor3 = themeList.SchemeColor
-                touch.ImageRectOffset = Vector2.new(364, 284)
-                touch.ImageRectSize = Vector2.new(36, 36)
-
-                togName_2.Name = "togName"
-                togName_2.Parent = keybindElement
-                togName_2.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                togName_2.BackgroundTransparency = 1.000
-                togName_2.Position = UDim2.new(0.727386296, 0, 0.272727281, 0)
-                togName_2.Size = UDim2.new(0, 70, 0, 14)
-                togName_2.Font = Enum.Font.GothamSemibold
-                togName_2.Text = oldKey
-                togName_2.TextColor3 = themeList.SchemeColor
-                togName_2.TextSize = 14.000
-                togName_2.TextXAlignment = Enum.TextXAlignment.Right   
-
-                coroutine.wrap(function()
-                    while wait() do
-                        if not oHover then
-                            keybindElement.BackgroundColor3 = themeList.ElementColor
-                        end
-                        togName_2.TextColor3 = themeList.SchemeColor
-                        touch.ImageColor3 = themeList.SchemeColor
-                        viewInfo.ImageColor3 = themeList.SchemeColor
-                        togName.BackgroundColor3 = themeList.TextColor
-                        togName.TextColor3 = themeList.TextColor
-                        Sample.ImageColor3 = themeList.SchemeColor
-                        moreInfo.TextColor3 = themeList.TextColor
-                        moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
-
-                    end
-                end)()
-            end
-
-            function Elements:NewColorPicker(colText, colInf, defcolor, callback)
-                colText = colText or "ColorPicker"
-                callback = callback or function() end
-                defcolor = defcolor or Color3.fromRGB(1,1,1)
-                local h, s, v = Color3.toHSV(defcolor)
-                local ms = game.Players.LocalPlayer:GetMouse()
-                local colorOpened = false
-                local colorElement = Instance.new("TextButton")
-                local UICorner = Instance.new("UICorner")
-                local colorHeader = Instance.new("Frame")
-                local UICorner_2 = Instance.new("UICorner")
-                local touch = Instance.new("ImageLabel")
-                local togName = Instance.new("TextLabel")
-                local viewInfo = Instance.new("ImageButton")
-                local colorCurrent = Instance.new("Frame")
-                local UICorner_3 = Instance.new("UICorner")
-                local UIListLayout = Instance.new("UIListLayout")
-                local colorInners = Instance.new("Frame")
-                local UICorner_4 = Instance.new("UICorner")
-                local rgb = Instance.new("ImageButton")
-                local UICorner_5 = Instance.new("UICorner")
-                local rbgcircle = Instance.new("ImageLabel")
-                local darkness = Instance.new("ImageButton")
-                local UICorner_6 = Instance.new("UICorner")
-                local darkcircle = Instance.new("ImageLabel")
-                local toggleDisabled = Instance.new("ImageLabel")
-                local toggleEnabled = Instance.new("ImageLabel")
-                local onrainbow = Instance.new("TextButton")
-                local togName_2 = Instance.new("TextLabel")
-
-                --Properties:
-                local Sample = Instance.new("ImageLabel")
-                Sample.Name = "Sample"
-                Sample.Parent = colorHeader
-                Sample.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                Sample.BackgroundTransparency = 1.000
-                Sample.Image = "http://www.roblox.com/asset/?id=4560909609"
-                Sample.ImageColor3 = themeList.SchemeColor
-                Sample.ImageTransparency = 0.600
-
-                local btn = colorHeader
-                local sample = Sample
-
-                colorElement.Name = "colorElement"
-                colorElement.Parent = sectionInners
-                colorElement.BackgroundColor3 = themeList.ElementColor
-                colorElement.BackgroundTransparency = 1.000
-                colorElement.ClipsDescendants = true
-                colorElement.Position = UDim2.new(0, 0, 0.566834569, 0)
-                colorElement.Size = UDim2.new(0, 352, 0, 33)
-                colorElement.AutoButtonColor = false
-                colorElement.Font = Enum.Font.SourceSans
-                colorElement.Text = ""
-                colorElement.TextColor3 = Color3.fromRGB(0, 0, 0)
-                colorElement.TextSize = 14.000
-                colorElement.MouseButton1Click:Connect(function()
-                    if not focusing then
-                        if colorOpened then
-                            colorOpened = false
-                            colorElement:TweenSize(UDim2.new(0, 352, 0, 33), "InOut", "Linear", 0.08)
-                            wait(0.1)
-                            updateSectionFrame()
-                            UpdateSize()
-                            local c = sample:Clone()
-                            c.Parent = btn
-                            local x, y = (ms.X - c.AbsolutePosition.X), (ms.Y - c.AbsolutePosition.Y)
-                            c.Position = UDim2.new(0, x, 0, y)
-                            local len, size = 0.35, nil
-                            if btn.AbsoluteSize.X >= btn.AbsoluteSize.Y then
-                                size = (btn.AbsoluteSize.X * 1.5)
-                            else
-                                size = (btn.AbsoluteSize.Y * 1.5)
-                            end
-                            c:TweenSizeAndPosition(UDim2.new(0, size, 0, size), UDim2.new(0.5, (-size / 2), 0.5, (-size / 2)), 'Out', 'Quad', len, true, nil)
-                            for i = 1, 10 do
-                                c.ImageTransparency = c.ImageTransparency + 0.05
-                                wait(len / 12)
-                            end
-                            c:Destroy()
-                        else
-                            colorOpened = true
-                            colorElement:TweenSize(UDim2.new(0, 352, 0, 141), "InOut", "Linear", 0.08, true)
-                            wait(0.1)
-                            updateSectionFrame()
-                            UpdateSize()
-                            local c = sample:Clone()
-                            c.Parent = btn
-                            local x, y = (ms.X - c.AbsolutePosition.X), (ms.Y - c.AbsolutePosition.Y)
-                            c.Position = UDim2.new(0, x, 0, y)
-                            local len, size = 0.35, nil
-                            if btn.AbsoluteSize.X >= btn.AbsoluteSize.Y then
-                                size = (btn.AbsoluteSize.X * 1.5)
-                            else
-                                size = (btn.AbsoluteSize.Y * 1.5)
-                            end
-                            c:TweenSizeAndPosition(UDim2.new(0, size, 0, size), UDim2.new(0.5, (-size / 2), 0.5, (-size / 2)), 'Out', 'Quad', len, true, nil)
-                            for i = 1, 10 do
-                                c.ImageTransparency = c.ImageTransparency + 0.05
-                                wait(len / 12)
-                            end
-                            c:Destroy()
-                        end
-                    else
-                        for i,v in next, infoContainer:GetChildren() do
-                            Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                            focusing = false
-                        end
-                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
-                    end
-                end)
-                UICorner.CornerRadius = UDim.new(0, 4)
-                UICorner.Parent = colorElement
-
-                colorHeader.Name = "colorHeader"
-                colorHeader.Parent = colorElement
-                colorHeader.BackgroundColor3 = themeList.ElementColor
-                colorHeader.Size = UDim2.new(0, 352, 0, 33)
-                colorHeader.ClipsDescendants = true
-
-                UICorner_2.CornerRadius = UDim.new(0, 4)
-                UICorner_2.Parent = colorHeader
-                
-                touch.Name = "touch"
-                touch.Parent = colorHeader
-                touch.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                touch.BackgroundTransparency = 1.000
-                touch.BorderColor3 = Color3.fromRGB(27, 42, 53)
-                touch.Position = UDim2.new(0.0199999996, 0, 0.180000007, 0)
-                touch.Size = UDim2.new(0, 21, 0, 21)
-                touch.Image = "rbxassetid://3926305904"
-                touch.ImageColor3 = themeList.SchemeColor
-                touch.ImageRectOffset = Vector2.new(44, 964)
-                touch.ImageRectSize = Vector2.new(36, 36)
-
-                togName.Name = "togName"
-                togName.Parent = colorHeader
-                togName.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                togName.BackgroundTransparency = 1.000
-                togName.Position = UDim2.new(0.096704483, 0, 0.272727281, 0)
-                togName.Size = UDim2.new(0, 288, 0, 14)
-                togName.Font = Enum.Font.GothamSemibold
-                togName.Text = colText
-                togName.TextColor3 = themeList.TextColor
-                togName.TextSize = 14.000
-                togName.RichText = true
-                togName.TextXAlignment = Enum.TextXAlignment.Left
-
-                local moreInfo = Instance.new("TextLabel")
-                local UICorner = Instance.new("UICorner")
-
-                moreInfo.Name = "TipMore"
-                moreInfo.Parent = infoContainer
-                moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
-                moreInfo.Position = UDim2.new(0, 0, 2, 0)
-                moreInfo.Size = UDim2.new(0, 353, 0, 33)
-                moreInfo.ZIndex = 9
-                moreInfo.Font = Enum.Font.GothamSemibold
-                moreInfo.Text = "  "..colInf
-                moreInfo.TextColor3 = themeList.TextColor
-                moreInfo.TextSize = 14.000
-                moreInfo.RichText = true
-                moreInfo.TextXAlignment = Enum.TextXAlignment.Left
-
-                UICorner.CornerRadius = UDim.new(0, 4)
-                UICorner.Parent = moreInfo
-
-                viewInfo.Name = "viewInfo"
-                viewInfo.Parent = colorHeader
-                viewInfo.BackgroundTransparency = 1.000
-                viewInfo.LayoutOrder = 9
-                viewInfo.Position = UDim2.new(0.930000007, 0, 0.151999995, 0)
-                viewInfo.Size = UDim2.new(0, 23, 0, 23)
-                viewInfo.ZIndex = 2
-                viewInfo.Image = "rbxassetid://3926305904"
-                viewInfo.ImageColor3 = themeList.SchemeColor
-                viewInfo.ImageRectOffset = Vector2.new(764, 764)
-                viewInfo.ImageRectSize = Vector2.new(36, 36)
-                viewInfo.MouseButton1Click:Connect(function()
-                    if not viewDe then
-                        viewDe = true
-                        focusing = true
-                        for i,v in next, infoContainer:GetChildren() do
-                            if v ~= moreInfo then
-                                Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                            end
-                        end
-                        Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,0,0)}, 0.2)
-                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 0.5}, 0.2)
-                        Utility:TweenObject(colorElement, {BackgroundColor3 = themeList.ElementColor}, 0.2)
-                        wait(1.5)
-                        focusing = false
-                        Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
-                        wait(0)
-                        viewDe = false
-                    end
-                end)   
-
-                colorCurrent.Name = "colorCurrent"
-                colorCurrent.Parent = colorHeader
-                colorCurrent.BackgroundColor3 = defcolor
-                colorCurrent.Position = UDim2.new(0.792613626, 0, 0.212121218, 0)
-                colorCurrent.Size = UDim2.new(0, 42, 0, 18)
-
-                UICorner_3.CornerRadius = UDim.new(0, 4)
-                UICorner_3.Parent = colorCurrent
-
-                UIListLayout.Parent = colorElement
-                UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-                UIListLayout.Padding = UDim.new(0, 3)
-
-                colorInners.Name = "colorInners"
-                colorInners.Parent = colorElement
-                colorInners.BackgroundColor3 = themeList.ElementColor
-                colorInners.Position = UDim2.new(0, 0, 0.255319148, 0)
-                colorInners.Size = UDim2.new(0, 352, 0, 105)
-
-                UICorner_4.CornerRadius = UDim.new(0, 4)
-                UICorner_4.Parent = colorInners
-
-                rgb.Name = "rgb"
-                rgb.Parent = colorInners
-                rgb.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                rgb.BackgroundTransparency = 1.000
-                rgb.Position = UDim2.new(0.0198863633, 0, 0.0476190485, 0)
-                rgb.Size = UDim2.new(0, 211, 0, 93)
-                rgb.Image = "http://www.roblox.com/asset/?id=6523286724"
-
-                UICorner_5.CornerRadius = UDim.new(0, 4)
-                UICorner_5.Parent = rgb
-
-                rbgcircle.Name = "rbgcircle"
-                rbgcircle.Parent = rgb
-                rbgcircle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                rbgcircle.BackgroundTransparency = 1.000
-                rbgcircle.Size = UDim2.new(0, 14, 0, 14)
-                rbgcircle.Image = "rbxassetid://3926309567"
-                rbgcircle.ImageColor3 = Color3.fromRGB(0, 0, 0)
-                rbgcircle.ImageRectOffset = Vector2.new(628, 420)
-                rbgcircle.ImageRectSize = Vector2.new(48, 48)
-
-                darkness.Name = "darkness"
-                darkness.Parent = colorInners
-                darkness.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                darkness.BackgroundTransparency = 1.000
-                darkness.Position = UDim2.new(0.636363626, 0, 0.0476190485, 0)
-                darkness.Size = UDim2.new(0, 18, 0, 93)
-                darkness.Image = "http://www.roblox.com/asset/?id=6523291212"
-
-                UICorner_6.CornerRadius = UDim.new(0, 4)
-                UICorner_6.Parent = darkness
-
-                darkcircle.Name = "darkcircle"
-                darkcircle.Parent = darkness
-                darkcircle.AnchorPoint = Vector2.new(0.5, 0)
-                darkcircle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                darkcircle.BackgroundTransparency = 1.000
-                darkcircle.Size = UDim2.new(0, 14, 0, 14)
-                darkcircle.Image = "rbxassetid://3926309567"
-                darkcircle.ImageColor3 = Color3.fromRGB(0, 0, 0)
-                darkcircle.ImageRectOffset = Vector2.new(628, 420)
-                darkcircle.ImageRectSize = Vector2.new(48, 48)
-
-                toggleDisabled.Name = "toggleDisabled"
-                toggleDisabled.Parent = colorInners
-                toggleDisabled.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                toggleDisabled.BackgroundTransparency = 1.000
-                toggleDisabled.Position = UDim2.new(0.704659104, 0, 0.0657142699, 0)
-                toggleDisabled.Size = UDim2.new(0, 21, 0, 21)
-                toggleDisabled.Image = "rbxassetid://3926309567"
-                toggleDisabled.ImageColor3 = themeList.SchemeColor
-                toggleDisabled.ImageRectOffset = Vector2.new(628, 420)
-                toggleDisabled.ImageRectSize = Vector2.new(48, 48)
-
-                toggleEnabled.Name = "toggleEnabled"
-                toggleEnabled.Parent = colorInners
-                toggleEnabled.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                toggleEnabled.BackgroundTransparency = 1.000
-                toggleEnabled.Position = UDim2.new(0.704999983, 0, 0.0659999996, 0)
-                toggleEnabled.Size = UDim2.new(0, 21, 0, 21)
-                toggleEnabled.Image = "rbxassetid://3926309567"
-                toggleEnabled.ImageColor3 = themeList.SchemeColor
-                toggleEnabled.ImageRectOffset = Vector2.new(784, 420)
-                toggleEnabled.ImageRectSize = Vector2.new(48, 48)
-                toggleEnabled.ImageTransparency = 1.000
-
-                onrainbow.Name = "onrainbow"
-                onrainbow.Parent = toggleEnabled
-                onrainbow.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                onrainbow.BackgroundTransparency = 1.000
-                onrainbow.Position = UDim2.new(2.90643607e-06, 0, 0, 0)
-                onrainbow.Size = UDim2.new(1, 0, 1, 0)
-                onrainbow.Font = Enum.Font.SourceSans
-                onrainbow.Text = ""
-                onrainbow.TextColor3 = Color3.fromRGB(0, 0, 0)
-                onrainbow.TextSize = 14.000
-
-                togName_2.Name = "togName"
-                togName_2.Parent = colorInners
-                togName_2.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                togName_2.BackgroundTransparency = 1.000
-                togName_2.Position = UDim2.new(0.779999971, 0, 0.100000001, 0)
-                togName_2.Size = UDim2.new(0, 278, 0, 14)
-                togName_2.Font = Enum.Font.GothamSemibold
-                togName_2.Text = "Rainbow"
-                togName_2.TextColor3 = themeList.TextColor
-                togName_2.TextSize = 14.000
-                togName_2.TextXAlignment = Enum.TextXAlignment.Left
-
-                if themeList.SchemeColor == Color3.fromRGB(255,255,255) then
-                    Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(0,0,0)}, 0.2)
-                end 
-                if themeList.SchemeColor == Color3.fromRGB(0,0,0) then
-                    Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(255,255,255)}, 0.2)
-                end 
-                local hovering = false
-
-                colorElement.MouseEnter:Connect(function()
-                    if not focusing then
-                        game.TweenService:Create(colorElement, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 8, themeList.ElementColor.g * 255 + 9, themeList.ElementColor.b * 255 + 10)
-                        }):Play()
-                        hovering = true
-                    end 
-                end)
-                colorElement.MouseLeave:Connect(function()
-                    if not focusing then
-                        game.TweenService:Create(colorElement, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            BackgroundColor3 = themeList.ElementColor
-                        }):Play()
-                        hovering = false
-                    end
-                end)        
-
-                if themeList.SchemeColor == Color3.fromRGB(255,255,255) then
-                    Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(0,0,0)}, 0.2)
-                end 
-                if themeList.SchemeColor == Color3.fromRGB(0,0,0) then
-                    Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(255,255,255)}, 0.2)
-                end 
-                coroutine.wrap(function()
-                    while wait() do
-                        if not hovering then
-                            colorElement.BackgroundColor3 = themeList.ElementColor
-                        end
-                        touch.ImageColor3 = themeList.SchemeColor
-                        colorHeader.BackgroundColor3 = themeList.ElementColor
-                        togName.TextColor3 = themeList.TextColor
-                        moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
-                        moreInfo.TextColor3 = themeList.TextColor
-                        viewInfo.ImageColor3 = themeList.SchemeColor
-                        colorInners.BackgroundColor3 = themeList.ElementColor
-                        toggleDisabled.ImageColor3 = themeList.SchemeColor
-                        toggleEnabled.ImageColor3 = themeList.SchemeColor
-                        togName_2.TextColor3 = themeList.TextColor
-                        Sample.ImageColor3 = themeList.SchemeColor
-                    end
-                end)()
-                updateSectionFrame()
-                UpdateSize()
-                local plr = game.Players.LocalPlayer
-                local mouse = plr:GetMouse()
-                local uis = game:GetService('UserInputService')
-                local rs = game:GetService("RunService")
-                local colorpicker = false
-                local darknesss = false
-                local dark = false
-                local rgb = rgb    
-                local dark = darkness    
-                local cursor = rbgcircle
-                local cursor2 = darkcircle
-                local color = {1,1,1}
-                local rainbow = false
-                local rainbowconnection
-                local counter = 0
-                --
-                local function zigzag(X) return math.acos(math.cos(X*math.pi))/math.pi end
-                counter = 0
-                local function mouseLocation()
-                    return plr:GetMouse()
-                end
-                local function cp()
-                    if colorpicker then
-                        local ml = mouseLocation()
-                        local x,y = ml.X - rgb.AbsolutePosition.X,ml.Y - rgb.AbsolutePosition.Y
-                        local maxX,maxY = rgb.AbsoluteSize.X,rgb.AbsoluteSize.Y
-                        if x<0 then x=0 end
-                        if x>maxX then x=maxX end
-                        if y<0 then y=0 end
-                        if y>maxY then y=maxY end
-                        x = x/maxX
-                        y = y/maxY
-                        local cx = cursor.AbsoluteSize.X/2
-                        local cy = cursor.AbsoluteSize.Y/2
-                        cursor.Position = UDim2.new(x,-cx,y,-cy)
-                        color = {1-x,1-y,color[3]}
-                        local realcolor = Color3.fromHSV(color[1],color[2],color[3])
-                        colorCurrent.BackgroundColor3 = realcolor
-                        callback(realcolor)
-                    end
-                    if darknesss then
-                        local ml = mouseLocation()
-                        local y = ml.Y - dark.AbsolutePosition.Y
-                        local maxY = dark.AbsoluteSize.Y
-                        if y<0 then y=0 end
-                        if y>maxY then y=maxY end
-                        y = y/maxY
-                        local cy = cursor2.AbsoluteSize.Y/2
-                        cursor2.Position = UDim2.new(0.5,0,y,-cy)
-                        cursor2.ImageColor3 = Color3.fromHSV(0,0,y)
-                        color = {color[1],color[2],1-y}
-                        local realcolor = Color3.fromHSV(color[1],color[2],color[3])
-                        colorCurrent.BackgroundColor3 = realcolor
-                        callback(realcolor)
-                    end
-                end
-
-                local function setcolor(tbl)
-                    local cx = cursor.AbsoluteSize.X/2
-                    local cy = cursor.AbsoluteSize.Y/2
-                    color = {tbl[1],tbl[2],tbl[3]}
-                    cursor.Position = UDim2.new(color[1],-cx,color[2]-1,-cy)
-                    cursor2.Position = UDim2.new(0.5,0,color[3]-1,-cy)
-                    local realcolor = Color3.fromHSV(color[1],color[2],color[3])
-                    colorCurrent.BackgroundColor3 = realcolor
-                end
-                local function setrgbcolor(tbl)
-                    local cx = cursor.AbsoluteSize.X/2
-                    local cy = cursor.AbsoluteSize.Y/2
-                    color = {tbl[1],tbl[2],color[3]}
-                    cursor.Position = UDim2.new(color[1],-cx,color[2]-1,-cy)
-                    local realcolor = Color3.fromHSV(color[1],color[2],color[3])
-                    colorCurrent.BackgroundColor3 = realcolor
-                    callback(realcolor)
-                end
-                local function togglerainbow()
-                    if rainbow then
-                        game.TweenService:Create(toggleEnabled, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut), {
-                            ImageTransparency = 1
-                        }):Play()
-                        rainbow = false
-                        rainbowconnection:Disconnect()
-                    else
-                        game.TweenService:Create(toggleEnabled, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut), {
-                            ImageTransparency = 0
-                        }):Play()
-                        rainbow = true
-                        rainbowconnection = rs.RenderStepped:Connect(function()
-                            setrgbcolor({zigzag(counter),1,1})
-                            counter = counter + 0.01
-                        end)
-                    end
-                end
-
-                onrainbow.MouseButton1Click:Connect(togglerainbow)
-                --
-                mouse.Move:connect(cp)
-                rgb.MouseButton1Down:connect(function()colorpicker=true end)
-                dark.MouseButton1Down:connect(function()darknesss=true end)
-                uis.InputEnded:Connect(function(input)
-                    if input.UserInputType.Name == 'MouseButton1' then
-                        if darknesss then darknesss = false end
-                        if colorpicker then colorpicker = false end
-                    end
-                end)
-                setcolor({h,s,v})
-            end
-            
-            function Elements:NewLabel(title)
-            	local labelFunctions = {}
-            	local label = Instance.new("TextLabel")
-            	local UICorner = Instance.new("UICorner")
-            	label.Name = "label"
-            	label.Parent = sectionInners
-            	label.BackgroundColor3 = themeList.SchemeColor
-            	label.BorderSizePixel = 0
-				label.ClipsDescendants = true
-            	label.Text = title
-           		label.Size = UDim2.new(0, 352, 0, 33)
-	            label.Font = Enum.Font.Gotham
-	            label.Text = "  "..title
-	            label.RichText = true
-	            label.TextColor3 = themeList.TextColor
-	            Objects[label] = "TextColor3"
-	            label.TextSize = 14.000
-	            label.TextXAlignment = Enum.TextXAlignment.Left
-	            
-	           	UICorner.CornerRadius = UDim.new(0, 4)
-                UICorner.Parent = label
-            	
-	            if themeList.SchemeColor == Color3.fromRGB(255,255,255) then
-	                Utility:TweenObject(label, {TextColor3 = Color3.fromRGB(0,0,0)}, 0.2)
-	            end 
-	            if themeList.SchemeColor == Color3.fromRGB(0,0,0) then
-	                Utility:TweenObject(label, {TextColor3 = Color3.fromRGB(255,255,255)}, 0.2)
-	            end 
-
-		        coroutine.wrap(function()
-		            while wait() do
-		                label.BackgroundColor3 = themeList.SchemeColor
-		                label.TextColor3 = themeList.TextColor
-		            end
-		        end)()
-                updateSectionFrame()
-                UpdateSize()
-                function labelFunctions:UpdateLabel(newText)
-                	if label.Text ~= "  "..newText then
-                		label.Text = "  "..newText
-                	end
-                end	
-                return labelFunctions
-            end	
-            return Elements
+            )
         end
-        return Sections
-    end  
-    return Tabs
+    }
+)
+local v131 =
+    v128.Misc:AddToggle(
+    "MyToggle",
+    {
+        ["Title"] = "Freeze",
+        ["Description"] = "Freeze for Your Player",
+        ["Default"] = false,
+        ["Callback"] = function(v170)
+            local v171 = 0
+            local v172
+            while true do
+                if (v171 == 0) then
+                    v172 = game:GetService("Players").LocalPlayer
+                    if (v172 and v172.Character and v172.Character:FindFirstChild("HumanoidRootPart")) then
+                        if v170 then
+                            local v340 = 0
+                            local v341
+                            while true do
+                                if (0 == v340) then
+                                    v341 = 0
+                                    while true do
+                                        if ((0) == v341) then
+                                            v172.Character.HumanoidRootPart.Anchored = true
+                                            print("Player is now frozen.")
+                                            break
+                                        end
+                                    end
+                                    break
+                                end
+                            end
+                        else
+                            local v342 = 0
+                            while true do
+                                if (v342 == 0) then
+                                    v172.Character.HumanoidRootPart.Anchored = false
+                                    print("Player is now unfrozen.")
+                                    break
+                                end
+                            end
+                        end
+                    else
+                        warn("Player or HumanoidRootPart not found!")
+                    end
+                    break
+                end
+            end
+        end
+    }
+)
+v128.Misc:AddButton(
+    {["Title"] = "Anti AFK", ["Description"] = "Best For Farming", ["Callback"] = function()
+            loadstring(
+                game:HttpGet("https://raw.githubusercontent.com/hassanxzayn-lua/Anti-afk/main/antiafkbyhassanxzyn")
+            )()
+        end}
+)
+local v132 =
+    v128.Misc:AddToggle(
+    "UnlimitedOxygenToggle",
+    {
+        ["Title"] = "Unlimited Oxygen",
+        ["Description"] = "Prevent your character from drowning by disabling oxygen.",
+        ["Default"] = false,
+        ["Callback"] = function(v173)
+            local v174 = game.Players.LocalPlayer
+            local v175 = v174.Character or v174.CharacterAdded:Wait()
+            if v173 then
+                local v263 = 0
+                while true do
+                    if (v263 == (1947 - (414 + 1533))) then
+                        if (v175 and v175:FindFirstChild("client") and v175.client:FindFirstChild("oxygen")) then
+                            local v343 = 0
+                            local v344
+                            while true do
+                                if (v343 == (555 - (443 + 112))) then
+                                    v344 = v175.client.oxygen
+                                    if (v344 and v344.Enabled) then
+                                        local v409 = 1479 - (888 + 591)
+                                        local v410
+                                        while true do
+                                            if (v409 == 0) then
+                                                v410 = 0
+                                                while true do
+                                                    if ((0) == v410) then
+                                                        v344.Enabled = false
+                                                        print("Unlimited Oxygen is ON")
+                                                        break
+                                                    end
+                                                end
+                                                break
+                                            end
+                                        end
+                                    end
+                                    break
+                                end
+                            end
+                        end
+                        v174.CharacterAdded:Connect(
+                            function()
+                                local v331 = 0
+                                local v332
+                                while true do
+                                    if (v331 == 0) then
+                                        v332 = 0
+                                        while true do
+                                            if (v332 == 0) then
+                                                v175 = v174.Character or v174.CharacterAdded:Wait()
+                                                if
+                                                    (v175 and v175:FindFirstChild("client") and
+                                                        v175.client:FindFirstChild("oxygen"))
+                                                 then
+                                                    local v431 = v175.client.oxygen
+                                                    if (v431 and v431.Enabled) then
+                                                        v431.Enabled = false
+                                                    end
+                                                end
+                                                break
+                                            end
+                                        end
+                                        break
+                                    end
+                                end
+                            end
+                        )
+                        break
+                    end
+                end
+            elseif (v175 and v175:FindFirstChild("client") and v175.client:FindFirstChild("oxygen")) then
+                local v291 = 0
+                local v292
+                while true do
+                    if (v291 == 0) then
+                        v292 = v175.client.oxygen
+                        if (v292 and not v292.Enabled) then
+                            local v376 = 0
+                            while true do
+                                if (v376 == (1678 - (136 + 1542))) then
+                                    v292.Enabled = true
+                                    print("Oxygen is now enabled.")
+                                    break
+                                end
+                            end
+                        end
+                        break
+                    end
+                end
+            end
+        end
+    }
+)
+local v133 =
+    v128.Misc:AddToggle(
+    "DisableSwimmingToggle",
+    {
+        ["Title"] = "Disable Swimming",
+        ["Description"] = "Disable swimming for your character.",
+        ["Default"] = false,
+        ["Callback"] = function(v176)
+            local v177 = 0
+            local v178
+            local v179
+            local v180
+            while true do
+                if (v177 == (3 - 2)) then
+                    v180 = nil
+                    while true do
+                        if (1 == v178) then
+                            if (v180 and v180:FindFirstChild("Humanoid")) then
+                                local v361 = 0
+                                local v362
+                                while true do
+                                    if (v361 == 0) then
+                                        v362 = v180:FindFirstChild("Humanoid")
+                                        if v362 then
+                                            if v176 then
+                                                v362:SetStateEnabled(Enum.HumanoidStateType.Swimming, false)
+                                                print("Swimming disabled.")
+                                            else
+                                                local v432 = 486 - (68 + 418)
+                                                while true do
+                                                    if ((0) == v432) then
+                                                        v362:SetStateEnabled(Enum.HumanoidStateType.Swimming, true)
+                                                        print("Swimming enabled.")
+                                                        break
+                                                    end
+                                                end
+                                            end
+                                        end
+                                        break
+                                    end
+                                end
+                            else
+                                warn("Humanoid not found!")
+                            end
+                            break
+                        end
+                        if ((0) == v178) then
+                            local v333 = 0
+                            while true do
+                                if (v333 == (1092 - (770 + 322))) then
+                                    v179 = game.Players.LocalPlayer
+                                    v180 = v179.Character or v179.CharacterAdded:Wait()
+                                    v333 = 1
+                                end
+                                if (v333 == 1) then
+                                    v178 = 1
+                                    break
+                                end
+                            end
+                        end
+                    end
+                    break
+                end
+                if (v177 == 0) then
+                    v178 = 0
+                    v179 = nil
+                    v177 = 1
+                end
+            end
+        end
+    }
+)
+local v134 =
+    v128.Misc:AddToggle(
+    "TeleportToggle",
+    {
+        ["Title"] = "T + Left Click Teleport",
+        ["Description"] = "Enable or disable teleporting by pressing T + Left Click.",
+        ["Default"] = false,
+        ["Callback"] = function(v181)
+            local v182 = 0
+            while true do
+                if (v182 == 0) then
+                    if (not hasUserToggled and not isTeleportEnabled) then
+                        local v313 = 0
+                        local v314
+                        while true do
+                            if (v313 == 0) then
+                                v314 = 0
+                                while true do
+                                    local v378 = 0
+                                    while true do
+                                        if ((0) == v378) then
+                                            if (v314 == (3 - 2)) then
+                                                return
+                                            end
+                                            if ((0) == v314) then
+                                                hasUserToggled = true
+                                                isTeleportEnabled = v181
+                                                v314 = 1 - 0
+                                            end
+                                            break
+                                        end
+                                    end
+                                end
+                                break
+                            end
+                        end
+                    end
+                    isTeleportEnabled = v181
+                    v182 = 1 + 0
+                end
+                if (1 == v182) then
+                    if v181 then
+                        if not connection then
+                            connection =
+                                game:GetService("UserInputService").InputBegan:Connect(
+                                function(v363, v364)
+                                    if
+                                        (not v364 and isTeleportEnabled and
+                                            (v363.UserInputType == Enum.UserInputType.MouseButton1))
+                                     then
+                                        if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.T) then
+                                            local v412 = 0
+                                            local v413
+                                            local v414
+                                            while true do
+                                                if (v412 == 1) then
+                                                    v413.Character:MoveTo(
+                                                        Vector3.new(v414.Hit.x, v414.Hit.y, v414.Hit.z)
+                                                    )
+                                                    break
+                                                end
+                                                if (v412 == 0) then
+                                                    local v433 = 0
+                                                    while true do
+                                                        if ((0) == v433) then
+                                                            v413 = game:GetService("Players").LocalPlayer
+                                                            v414 = v413:GetMouse()
+                                                            v433 = 4 - 3
+                                                        end
+                                                        if (v433 == (3 - 2)) then
+                                                            v412 = 1 + 0
+                                                            break
+                                                        end
+                                                    end
+                                                end
+                                            end
+                                        end
+                                    end
+                                end
+                            )
+                        end
+                    elseif connection then
+                        local v346 = 0
+                        while true do
+                            if (v346 == 0) then
+                                connection:Disconnect()
+                                connection = nil
+                                break
+                            end
+                        end
+                    end
+                    break
+                end
+            end
+        end
+    }
+)
+local v135 =
+    v128.Misc:AddToggle(
+    "InfiniteJumpToggle",
+    {
+        ["Title"] = "Infinite Jumps",
+        ["Description"] = "Enable or disable infinite jumps.",
+        ["Default"] = false,
+        ["Callback"] = function(v183)
+            _G.infinjump = v183
+        end
+    }
+)
+if not _G.infinJumpStarted then
+    local v244 = 831 - (762 + 69)
+    local v245
+    local v246
+    while true do
+        if (v244 == 0) then
+            _G.infinJumpStarted = true
+            _G.infinjump = false
+            v244 = 3 - 2
+        end
+        if (v244 == 1) then
+            v245 = game:GetService("Players").LocalPlayer
+            v246 = v245:GetMouse()
+            v244 = 2
+        end
+        if (2 == v244) then
+            v246.KeyDown:Connect(
+                function(v315)
+                    if _G.infinjump then
+                        if (v315:byte() == 32) then
+                            local v379 = 0
+                            local v380
+                            while true do
+                                if (v379 == 0) then
+                                    v380 = v245.Character and v245.Character:FindFirstChildOfClass("Humanoid")
+                                    if v380 then
+                                        v380:ChangeState("Jumping")
+                                        wait()
+                                        v380:ChangeState("Seated")
+                                    end
+                                    break
+                                end
+                            end
+                        end
+                    end
+                end
+            )
+            break
+        end
+    end
 end
-return Kavo
+local v136 =
+    v128.Misc:AddSlider(
+    "SpeedSlider",
+    {
+        ["Title"] = "WalkSpeed",
+        ["Description"] = "Increase Walk Speed",
+        ["Default"] = 38 - 22,
+        ["Min"] = 6 + 10,
+        ["Max"] = 500,
+        ["Rounding"] = 1 + 0,
+        ["Callback"] = function(v184)
+            game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = v184
+        end
+    }
+)
+local v136 =
+    v128.Misc:AddSlider(
+    "JumpSlider",
+    {
+        ["Title"] = "Jump Power",
+        ["Description"] = "Increase Jump Power",
+        ["Default"] = 194 - 144,
+        ["Min"] = 207 - (8 + 149),
+        ["Max"] = 1820 - (1199 + 121),
+        ["Rounding"] = 1 - 0,
+        ["Callback"] = function(v186)
+            game.Players.LocalPlayer.Character.Humanoid.JumpPower = v186
+        end
+    }
+)
+local v137 =
+    v128.Weather:AddToggle(
+    "DayNightToggle",
+    {
+        ["Title"] = "Day/Night Cycle",
+        ["Description"] = "Enable or disable Day/Night cycle manipulation.",
+        ["Default"] = false,
+        ["Callback"] = function(v188)
+            if v188 then
+                if not _G.FullBrightExecuted then
+                    _G.FullBrightEnabled = true
+                    _G.NormalLightingSettings = {
+                        ["Brightness"] = game:GetService("Lighting").Brightness,
+                        ["ClockTime"] = game:GetService("Lighting").ClockTime,
+                        ["FogEnd"] = game:GetService("Lighting").FogEnd,
+                        ["GlobalShadows"] = game:GetService("Lighting").GlobalShadows,
+                        ["Ambient"] = game:GetService("Lighting").Ambient
+                    }
+                    game:GetService("Lighting"):GetPropertyChangedSignal("Brightness"):Connect(
+                        function()
+                            if
+                                ((game:GetService("Lighting").Brightness ~= (2 - 1)) and
+                                    (game:GetService("Lighting").Brightness ~= _G.NormalLightingSettings.Brightness))
+                             then
+                                local v347 = 0
+                                local v348
+                                while true do
+                                    if ((0) == v347) then
+                                        v348 = 0
+                                        while true do
+                                            if (v348 == 0) then
+                                                _G.NormalLightingSettings.Brightness =
+                                                    game:GetService("Lighting").Brightness
+                                                if not _G.FullBrightEnabled then
+                                                    repeat
+                                                        wait()
+                                                    until _G.FullBrightEnabled
+                                                end
+                                                v348 = 1
+                                            end
+                                            if (v348 == 1) then
+                                                game:GetService("Lighting").Brightness = 1
+                                                break
+                                            end
+                                        end
+                                        break
+                                    end
+                                end
+                            end
+                        end
+                    )
+                    game:GetService("Lighting"):GetPropertyChangedSignal("ClockTime"):Connect(
+                        function()
+                            if
+                                ((game:GetService("Lighting").ClockTime ~= 12) and
+                                    (game:GetService("Lighting").ClockTime ~= _G.NormalLightingSettings.ClockTime))
+                             then
+                                local v349 = 1807 - (518 + 1289)
+                                while true do
+                                    if (v349 == 1) then
+                                        game:GetService("Lighting").ClockTime = 2 + 10
+                                        break
+                                    end
+                                    if (v349 == 0) then
+                                        _G.NormalLightingSettings.ClockTime = game:GetService("Lighting").ClockTime
+                                        if not _G.FullBrightEnabled then
+                                            repeat
+                                                wait()
+                                            until _G.FullBrightEnabled
+                                        end
+                                        v349 = 1 + 0
+                                    end
+                                end
+                            end
+                        end
+                    )
+                    game:GetService("Lighting"):GetPropertyChangedSignal("FogEnd"):Connect(
+                        function()
+                            if
+                                ((game:GetService("Lighting").FogEnd ~= (787012 - (304 + 165))) and
+                                    (game:GetService("Lighting").FogEnd ~= _G.NormalLightingSettings.FogEnd))
+                             then
+                                local v350 = 0
+                                while true do
+                                    if (v350 == 1) then
+                                        game:GetService("Lighting").FogEnd = 786703 - (54 + 106)
+                                        break
+                                    end
+                                    if (v350 == 0) then
+                                        _G.NormalLightingSettings.FogEnd = game:GetService("Lighting").FogEnd
+                                        if not _G.FullBrightEnabled then
+                                            repeat
+                                                wait()
+                                            until _G.FullBrightEnabled
+                                        end
+                                        v350 = 1970 - (1618 + 351)
+                                    end
+                                end
+                            end
+                        end
+                    )
+                    game:GetService("Lighting"):GetPropertyChangedSignal("GlobalShadows"):Connect(
+                        function()
+                            if
+                                ((game:GetService("Lighting").GlobalShadows ~= false) and
+                                    (game:GetService("Lighting").GlobalShadows ~=
+                                        _G.NormalLightingSettings.GlobalShadows))
+                             then
+                                local v351 = 0
+                                local v352
+                                while true do
+                                    if (v351 == 0) then
+                                        v352 = 1016 - (10 + 1006)
+                                        while true do
+                                            if (v352 == 1) then
+                                                game:GetService("Lighting").GlobalShadows = false
+                                                break
+                                            end
+                                            if (v352 == 0) then
+                                                _G.NormalLightingSettings.GlobalShadows =
+                                                    game:GetService("Lighting").GlobalShadows
+                                                if not _G.FullBrightEnabled then
+                                                    repeat
+                                                        wait()
+                                                    until _G.FullBrightEnabled
+                                                end
+                                                v352 = 3 - 2
+                                            end
+                                        end
+                                        break
+                                    end
+                                end
+                            end
+                        end
+                    )
+                    game:GetService("Lighting"):GetPropertyChangedSignal("Ambient"):Connect(
+                        function()
+                            if
+                                ((game:GetService("Lighting").Ambient ~=
+                                    Color3.fromRGB(178, 1211 - (912 + 121), 178)) and
+                                    (game:GetService("Lighting").Ambient ~= _G.NormalLightingSettings.Ambient))
+                             then
+                                local v353 = 0
+                                while true do
+                                    if (v353 == 0) then
+                                        _G.NormalLightingSettings.Ambient = game:GetService("Lighting").Ambient
+                                        if not _G.FullBrightEnabled then
+                                            repeat
+                                                wait()
+                                            until _G.FullBrightEnabled
+                                        end
+                                        v353 = 1290 - (1140 + 149)
+                                    end
+                                    if (v353 == 1) then
+                                        game:GetService("Lighting").Ambient = Color3.fromRGB(236 - 58, 178, 178)
+                                        break
+                                    end
+                                end
+                            end
+                        end
+                    )
+                    game:GetService("Lighting").Brightness = 1 + 0
+                    game:GetService("Lighting").ClockTime = 40 - 28
+                    game:GetService("Lighting").FogEnd = 1475181 - 688638
+                    game:GetService("Lighting").GlobalShadows = false
+                    game:GetService("Lighting").Ambient = Color3.fromRGB(31 + 147, 178, 178)
+                    local v299 = true
+                    spawn(
+                        function()
+                            repeat
+                                wait()
+                            until _G.FullBrightEnabled
+                            while wait() do
+                                if (_G.FullBrightEnabled ~= v299) then
+                                    local v365 = 0
+                                    while true do
+                                        if (v365 == 0) then
+                                            if not _G.FullBrightEnabled then
+                                                local v426 = 0
+                                                while true do
+                                                    if (v426 == (188 - (165 + 21))) then
+                                                        game:GetService("Lighting").Ambient =
+                                                            _G.NormalLightingSettings.Ambient
+                                                        break
+                                                    end
+                                                    if (v426 == (112 - (61 + 50))) then
+                                                        game:GetService("Lighting").FogEnd =
+                                                            _G.NormalLightingSettings.FogEnd
+                                                        game:GetService("Lighting").GlobalShadows =
+                                                            _G.NormalLightingSettings.GlobalShadows
+                                                        v426 = 1
+                                                    end
+                                                    if (v426 == 0) then
+                                                        game:GetService("Lighting").Brightness =
+                                                            _G.NormalLightingSettings.Brightness
+                                                        game:GetService("Lighting").ClockTime =
+                                                            _G.NormalLightingSettings.ClockTime
+                                                        v426 = 1 - 0
+                                                    end
+                                                end
+                                            else
+                                                local v427 = 0
+                                                while true do
+                                                    if (v427 == 0) then
+                                                        game:GetService("Lighting").Brightness = 1
+                                                        game:GetService("Lighting").ClockTime = 12
+                                                        v427 = 1 + 0
+                                                    end
+                                                    if (v427 == (1461 - (1295 + 165))) then
+                                                        game:GetService("Lighting").FogEnd = 179470 + 607073
+                                                        game:GetService("Lighting").GlobalShadows = false
+                                                        v427 = 2
+                                                    end
+                                                    if (v427 == (1)) then
+                                                        game:GetService("Lighting").Ambient =
+                                                            Color3.fromRGB(
+                                                            1575 - (819 + 578),
+                                                            1580 - (331 + 1071),
+                                                            178
+                                                        )
+                                                        break
+                                                    end
+                                                end
+                                            end
+                                            v299 = not v299
+                                            break
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    )
+                end
+                _G.FullBrightExecuted = true
+                _G.FullBrightEnabled = not _G.FullBrightEnabled
+            elseif _G.FullBrightEnabled then
+                local v300 = 0
+                local v301
+                while true do
+                    if (v300 == (743 - (588 + 155))) then
+                        v301 = 0
+                        while true do
+                            if (1 == v301) then
+                                game:GetService("Lighting").ClockTime = _G.NormalLightingSettings.ClockTime
+                                game:GetService("Lighting").FogEnd = _G.NormalLightingSettings.FogEnd
+                                v301 = 1284 - (546 + 736)
+                            end
+                            if ((1937 - (1834 + 103)) == v301) then
+                                _G.FullBrightEnabled = false
+                                game:GetService("Lighting").Brightness = _G.NormalLightingSettings.Brightness
+                                v301 = 1
+                            end
+                            if (v301 == 2) then
+                                game:GetService("Lighting").GlobalShadows = _G.NormalLightingSettings.GlobalShadows
+                                game:GetService("Lighting").Ambient = _G.NormalLightingSettings.Ambient
+                                break
+                            end
+                        end
+                        break
+                    end
+                end
+            end
+        end
+    }
+)
+local v138 =
+    v128.Weather:AddToggle(
+    "NoFogToggle",
+    {
+        ["Title"] = "No Fog",
+        ["Description"] = "Disable fog in the game.",
+        ["Default"] = false,
+        ["Callback"] = function(v189)
+            if v189 then
+                local v264 = 0
+                local v265
+                while true do
+                    if (v264 == 0) then
+                        v265 = 0
+                        while true do
+                            if (v265 == (1766 - (1536 + 230))) then
+                                game.Lighting.FogEnd = 100491 - (128 + 363)
+                                game.Lighting.FogStart = 0
+                                v265 = 1
+                            end
+                            if (v265 == (2 - 1)) then
+                                game.Lighting.ClockTime = 4 + 10
+                                game.Lighting.Brightness = 2 - 0
+                                v265 = 5 - 3
+                            end
+                            if (v265 == (4 - 2)) then
+                                game.Lighting.GlobalShadows = false
+                                break
+                            end
+                        end
+                        break
+                    end
+                end
+            else
+                local v266 = 0
+                while true do
+                    if (v266 == (1011 - (615 + 394))) then
+                        game.Lighting.GlobalShadows = true
+                        break
+                    end
+                    if (v266 == 1) then
+                        game.Lighting.ClockTime = 12 + 0
+                        game.Lighting.Brightness = 2 - 1
+                        v266 = 2
+                    end
+                    if (v266 == 0) then
+                        game.Lighting.FogEnd = 787194 - (59 + 592)
+                        game.Lighting.FogStart = 0
+                        v266 = 1 - 0
+                    end
+                end
+            end
+        end
+    }
+)
+local v139 =
+    v128.Teleport:AddDropdown(
+    "TeleportLocationsDropdown",
+    {
+        ["Title"] = "Teleport Locations",
+        ["Description"] = "Select a location to teleport to",
+        ["Values"] = {
+            "Altar",
+            "arch",
+            "birch",
+            "brine",
+            "deep",
+            "deepshop",
+            "enchant",
+            "executive",
+            "keepers",
+            "mod_house",
+            "moosewood",
+            "mushgrove",
+            "roslit",
+            "snow",
+            "snowcap",
+            "spike",
+            "statue",
+            "sunstone",
+            "swamp",
+            "terrapin",
+            "trident",
+            "vertigo",
+            "volcano",
+            "wilson",
+            "wilsons_rod"
+        },
+        ["Multi"] = false,
+        ["Default"] = "None",
+        ["Callback"] = function(v190)
+            local v191 = {
+                ["Altar"] = Vector3.new(1234.320068359375 + 62, -808.5519409179688, -(550.9381713867188 - 252)),
+                ["arch"] = Vector3.new(2232.966796875 - (885 + 349), 126.6849365234375, -1237.1434326171875),
+                ["birch"] = Vector3.new(1384.3203125 + 358, 138.25787353515625, -(6822.23779296875 - 4320)),
+                ["brine"] = Vector3.new(-(5218.10596 - 3424), -145.849701, -3302.92358),
+                ["deep"] = Vector3.new(-(2478.88672 - (915 + 53)), -237.695053, -2852.90674),
+                ["deepshop"] = Vector3.new(-979.196411, -(1048.910156 - (768 + 33)), -(10334.87207 - 7635)),
+                ["enchant"] = Vector3.new(1296.320068359375, -(1422.5519409179688 - 614), -298.93817138671875),
+                ["executive"] = Vector3.new(
+                    -29.836761474609375,
+                    -(578.48486328125 - (287 + 41)),
+                    1046.1161499023438 - (638 + 209)
+                ),
+                ["keepers"] = Vector3.new(
+                    674.320068359375 + 622,
+                    -808.5519409179688,
+                    -(1984.9381713867188 - (96 + 1590))
+                ),
+                ["mod_house"] = Vector3.new(
+                    -30.205902099609375,
+                    -(1921.4059448242188 - (741 + 931)),
+                    101.05290222167969 + 103
+                ),
+                ["moosewood"] = Vector3.new(1090.1011352539062 - 707, 611.2406005859375 - 480, 243.93385314941406),
+                ["mushgrove"] = Vector3.new(1074.48583984375 + 1427, 127.7583236694336, -(310.699462890625 + 410)),
+                ["roslit"] = Vector3.new(
+                    -(471.511474609375 + 1005),
+                    493.1684265136719 - 363,
+                    219.685302734375 + 452
+                ),
+                ["snow"] = Vector3.new(2648.67578125, 68.06605529785156 + 71, 10283.29736328125 - 7762),
+                ["snowcap"] = Vector3.new(2648.67578125, 125.06605529785156 + 14, 2521.29736328125),
+                ["spike"] = Vector3.new(-1254.800537109375, 627.8855590820312 - (64 + 430), 1554.2021484375),
+                ["statue"] = Vector3.new(
+                    72.8836669921875,
+                    137.6964874267578 + 1,
+                    -(1391.4193115234375 - (106 + 257))
+                ),
+                ["sunstone"] = Vector3.new(-(662.259705 + 271), 128.143951, -1119.52063),
+                ["swamp"] = Vector3.new(3222.48583984375 - (496 + 225), 259.7583236694336 - 132, -720.699462890625),
+                ["terrapin"] = Vector3.new(
+                    -(696.875244140625 - 553),
+                    1799.1676025390625 - (256 + 1402),
+                    1909.6070556640625
+                ),
+                ["trident"] = Vector3.new(
+                    -(3378.4898700000003 - (30 + 1869)),
+                    -(1597.710632 - (213 + 1156)),
+                    -(2579.39307 - (96 + 92))
+                ),
+                ["vertigo"] = Vector3.new(-112.007278, -(84.901093 + 408), 1939.32788 - (142 + 757)),
+                ["volcano"] = Vector3.new(-1888.52319, 163.847565, 269.238281 + 60),
+                ["wilson"] = Vector3.new(1201.80591 + 1737, 356.474762 - (32 + 47), 4544.13379 - (1053 + 924)),
+                ["wilsons_rod"] = Vector3.new(2820.2085 + 59, 135.07663, 2723.64233)
+            }
+            local v192 = v191[v190]
+            if v192 then
+                local v267 = 0
+                local v268
+                while true do
+                    if (v267 == (1648 - (685 + 963))) then
+                        v268 = game.Players.LocalPlayer
+                        if (v268 and v268.Character and v268.Character:FindFirstChild("HumanoidRootPart")) then
+                            v268.Character.HumanoidRootPart.CFrame = CFrame.new(v192)
+                        end
+                        break
+                    end
+                end
+            else
+                warn("Invalid location selected!")
+            end
+        end
+    }
+)
+local v140 =
+    v128.Teleport:AddDropdown(
+    "FishAreaTeleport",
+    {
+        ["Title"] = "Fish Area Teleport",
+        ["Description"] = "Select a fish area to teleport to",
+        ["Values"] = {
+            "Roslit_Bay",
+            "Ocean",
+            "Snowcap_Pond",
+            "Moosewood_Docks",
+            "Deep_Ocean",
+            "Vertigo",
+            "Snowcap_Ocean",
+            "Harvesters_Spike",
+            "SunStone",
+            "Roslit_Bay_Ocean",
+            "Moosewood_Pond",
+            "Terrapin_Ocean",
+            "Isonade",
+            "Moosewood_Ocean",
+            "Roslit_Pond",
+            "Moosewood_Ocean_Mythical",
+            "Terrapin_Olm",
+            "The_Arch",
+            "Scallop_Ocean",
+            "SunStone_Hidden",
+            "Mushgrove_Stone",
+            "Keepers_Altar",
+            "Lava",
+            "Roslit_Pond_Seaweed"
+        },
+        ["Default"] = "None",
+        ["Callback"] = function(v193)
+            local v194 = {
+                ["Roslit_Bay"] = Vector3.new(-(4572.7388900000005 - 2909), 119.234116 + 30, 495.498016),
+                ["Ocean"] = Vector3.new(7868.104 - (166 + 37), 125.444443, 2601.59351),
+                ["Snowcap_Pond"] = Vector3.new(
+                    4659.09009 - (22 + 1859),
+                    2055.283783 - (843 + 929),
+                    2842.323 - (30 + 232)
+                ),
+                ["Moosewood_Docks"] = Vector3.new(
+                    979.2359924316406 - 636,
+                    133.61595153808594,
+                    1044.0580139160156 - (55 + 722)
+                ),
+                ["Deep_Ocean"] = Vector3.new(7660.07153 - 4091, 125.480949, 6697.12695),
+                ["Vertigo"] = Vector3.new(-(1812.697098 - (78 + 1597)), -(162.86377000000005 + 574), 1233.15271),
+                ["Snowcap_Ocean"] = Vector3.new(2810.66699 + 278, 110.534332 + 21, 3136.11304 - (305 + 244)),
+                ["Harvesters_Spike"] = Vector3.new(-(1145.61523 + 89), 230.228767 - (95 + 10), 1748.57166),
+                ["SunStone"] = Vector3.new(-845.903992, 95.172211 + 38, -(3685.57776 - 2522)),
+                ["Roslit_Bay_Ocean"] = Vector3.new(
+                    -(2336.0930200000003 - 628),
+                    917.000015 - (592 + 170),
+                    1339.928009 - 955
+                ),
+                ["Moosewood_Pond"] = Vector3.new(1277.735992 - 768, 71.000031 + 81, 118.17300399999999 + 184),
+                ["Terrapin_Ocean"] = Vector3.new(58.6469994, 325.49998500000004 - 190, 2147.41699),
+                ["Isonade"] = Vector3.new(-(172.99901999999997 + 888), 121.164787, 953.996033),
+                ["Moosewood_Ocean"] = Vector3.new(-167.642715, 231.19548 - 106, 755.009521 - (353 + 154)),
+                ["Roslit_Pond"] = Vector3.new(-(2410.96997 - 599), 201.047089 - 53, 409.642517 + 183),
+                ["Moosewood_Ocean_Mythical"] = Vector3.new(198.802994 + 54, 90.849625 + 45, 51.8839989 - 15),
+                ["Terrapin_Olm"] = Vector3.new(22.0639992, 182.000015, 1944.36804),
+                ["The_Arch"] = Vector3.new(2428.3089600000003 - 1145, 303.923569 - 173, -(1251.29602 - (7 + 79))),
+                ["Scallop_Ocean"] = Vector3.new(23.2255898, 125.236847, 346.952271 + 392),
+                ["SunStone_Hidden"] = Vector3.new(
+                    -1139.55701,
+                    315.62203999999997 - (24 + 157),
+                    -(2146.94324 - 1070)
+                ),
+                ["Mushgrove_Stone"] = Vector3.new(5386.36011 - 2861, 131.000015, -(221.18402100000003 + 555)),
+                ["Keepers_Altar"] = Vector3.new(
+                    1307.13599,
+                    -(2168.2922360000002 - 1363),
+                    -(541.363998 - (262 + 118))
+                ),
+                ["Lava"] = Vector3.new(-(3042.86206 - (1038 + 45)), 416.144821 - 223, 501.960999 - (19 + 211)),
+                ["Roslit_Pond_Seaweed"] = Vector3.new(
+                    -(1898.2869873046875 - (88 + 25)),
+                    376.1578063964844 - 228,
+                    318.92999267578125 + 321
+                )
+            }
+            local v195 = v194[v193]
+            if v195 then
+                local v269 = 0
+                local v270
+                while true do
+                    if (0 == v269) then
+                        v270 = game.Players.LocalPlayer
+                        if (v270 and v270.Character and v270.Character:FindFirstChild("HumanoidRootPart")) then
+                            v270.Character.HumanoidRootPart.CFrame = CFrame.new(v195)
+                        end
+                        break
+                    end
+                end
+            else
+                warn("Invalid location selected!")
+            end
+        end
+    }
+)
+local v141 =
+    v128.Teleport:AddDropdown(
+    "Teleport To NPC",
+    {
+        ["Title"] = "Teleport To NPC",
+        ["Description"] = "Select an NPC to teleport to",
+        ["Values"] = {
+            "Witch",
+            "Quiet_Synph",
+            "Pierre",
+            "Phineas",
+            "Paul",
+            "Shipwright",
+            "Angler",
+            "Marc",
+            "Lucas",
+            "Latern_Keeper",
+            "Latern_Keeper2",
+            "Inn_Keeper",
+            "Roslit_Keeper",
+            "FishingNpc_1",
+            "FishingNpc_2",
+            "FishingNpc_3",
+            "Henry",
+            "Daisy",
+            "Appraiser",
+            "Merchant",
+            "Mod_Keeper",
+            "Ashe",
+            "Alfredrickus"
+        },
+        ["Multi"] = false,
+        ["Default"] = "None",
+        ["Callback"] = function(v196)
+            local v197 = {
+                ["Witch"] = Vector3.new(812.6380919999999 - (342 + 61), 59.45152300000001 + 75, 311.403687),
+                ["Quiet_Synph"] = Vector3.new(566.263245, 317.00003100000004 - (4 + 161), 217.872101 + 136),
+                ["Pierre"] = Vector3.new(1227.3885500000001 - 836, 354.348389 - 219, 693.712387 - (322 + 175)),
+                ["Phineas"] = Vector3.new(
+                    1032.912292 - (173 + 390),
+                    37.69342 + 113,
+                    591.9549870000001 - (203 + 111)
+                ),
+                ["Paul"] = Vector3.new(24.741881999999976 + 357, 136.500031, 341.891022),
+                ["Shipwright"] = Vector3.new(357.972595, 94.61596700000001 + 39, 752.154541 - 494),
+                ["Angler"] = Vector3.new(434.102478 + 46, 856.501053 - (57 + 649), 686.226898 - (328 + 56)),
+                ["Marc"] = Vector3.new(149.160034 + 317, 151.00206, 224.497086),
+                ["Lucas"] = Vector3.new(961.3396299999999 - (433 + 79), 181.999893, 17.68907200000001 + 163),
+                ["Latern_Keeper"] = Vector3.new(-39.0456772, -(199.599976 + 47), 655.644363 - 460),
+                ["Latern_Keeper2"] = Vector3.new(-(80.4230175 - 63), -304.970276, -(11.529892 + 3)),
+                ["Inn_Keeper"] = Vector3.new(434.458466 + 53, 150.800034, 1267.498932 - (562 + 474)),
+                ["Roslit_Keeper"] = Vector3.new(-(3527.37891 - 2015), 134.500031, 631.24353),
+                ["FishingNpc_1"] = Vector3.new(-1429.04138, 272.371552 - 138, 1591.034424 - (76 + 829)),
+                ["FishingNpc_2"] = Vector3.new(-1778.55408, 1822.791779 - (1506 + 167), 648.097107),
+                ["FishingNpc_3"] = Vector3.new(
+                    -(3339.26807 - 1561),
+                    413.83164999999997 - (58 + 208),
+                    386.258606 + 267
+                ),
+                ["Henry"] = Vector3.new(483.539307, 109.38305700000001 + 43, 136.296143 + 100),
+                ["Daisy"] = Vector3.new(
+                    2370.550049 - 1789,
+                    502.49075300000004 - (258 + 79),
+                    28.499968999999993 + 185
+                ),
+                ["Appraiser"] = Vector3.new(952.182373 - 499, 150.500031, 1676.908783 - (1219 + 251)),
+                ["Merchant"] = Vector3.new(416.690521, 1801.302628 - (1231 + 440), 400.765289 - (34 + 24)),
+                ["Mod_Keeper"] = Vector3.new(-(23.090583799999997 + 16), -245.141144, 195.837891),
+                ["Ashe"] = Vector3.new(-(3189.9405500000003 - 1480), 66.86241100000001 + 83, 2213.399536 - 1484),
+                ["Alfredrickus"] = Vector3.new(-(4872.60632 - 3352), 373.923264 - 231, 2559.522034 - 1795)
+            }
+            local v198 = v197[v196]
+            if v198 then
+                local v271 = game.Players.LocalPlayer
+                if (v271 and v271.Character and v271.Character:FindFirstChild("HumanoidRootPart")) then
+                    v271.Character.HumanoidRootPart.CFrame = CFrame.new(v198)
+                end
+            else
+                warn("Invalid location selected!")
+            end
+        end
+    }
+)
+local v141 =
+    v128.Teleport:AddDropdown(
+    "Teleport To Items",
+    {
+        ["Title"] = "Teleport To Items",
+        ["Description"] = "Select an item to teleport to",
+        ["Values"] = {
+            "Training_Rod",
+            "Plastic_Rod",
+            "Lucky_Rod",
+            "Kings_Rod",
+            "Flimsy_Rod",
+            "Nocturnal_Rod",
+            "Fast_Rod",
+            "Carbon_Rod",
+            "Long_Rod",
+            "Mythical_Rod",
+            "Midas_Rod",
+            "Trident_Rod",
+            "Enchated_Altar",
+            "Bait_Crate",
+            "Quality_Bait_Crate",
+            "Crab_Cage",
+            "GPS",
+            "Basic_Diving_Gear",
+            "Fish_Radar"
+        },
+        ["Multi"] = false,
+        ["Default"] = "None",
+        ["Callback"] = function(v199)
+            local v200 = {
+                ["Training_Rod"] = Vector3.new(1741.693848 - (299 + 985), 36.357529 + 112, 753.414307 - 523),
+                ["Plastic_Rod"] = Vector3.new(547.425385 - (86 + 7), 604.1697389999999 - 456, 229.172424),
+                ["Lucky_Rod"] = Vector3.new(
+                    43.085999000000015 + 403,
+                    1028.253006 - (672 + 208),
+                    96.16000399999999 + 126
+                ),
+                ["Kings_Rod"] = Vector3.new(1375.57642, -(942.201721 - (14 + 118)), -(748.509247 - (339 + 106))),
+                ["Flimsy_Rod"] = Vector3.new(471.107697, 148.36171, 183.642441 + 46),
+                ["Nocturnal_Rod"] = Vector3.new(-141.874237, -515.313538, 573.04529 + 566),
+                ["Fast_Rod"] = Vector3.new(1842.183563 - (440 + 955), 146.225739 + 2, 395.187454 - 175),
+                ["Carbon_Rod"] = Vector3.new(454.083618, 50.59007299999999 + 100, 560.328827 - 335),
+                ["Long_Rod"] = Vector3.new(333.695038 + 152, 524.656326 - (260 + 93), 136.746109 + 9),
+                ["Mythical_Rod"] = Vector3.new(889.716705 - 500, 238.588821 - 106, 2288.042847 - (1181 + 793)),
+                ["Midas_Rod"] = Vector3.new(103.98165899999998 + 298, 133.258316, 633.325745 - (105 + 202)),
+                ["Trident_Rod"] = Vector3.new(-(1190.34192 + 294), -222.325562, -(3004.77002 - (352 + 458))),
+                ["Enchated_Altar"] = Vector3.new(5281.54651 - 3971, -(2042.469604 - 1243), -(80.7303467 + 2)),
+                ["Bait_Crate"] = Vector3.new(1122.575134 - 738, 135.351928, 1286.534027 - (438 + 511)),
+                ["Quality_Bait_Crate"] = Vector3.new(
+                    -(1560.876 - (1262 + 121)),
+                    1212.472 - (728 + 340),
+                    3722.844 - (816 + 974)
+                ),
+                ["Crab_Cage"] = Vector3.new(1451.803589 - 977, 535.664566 - 386, 229.49469),
+                ["GPS"] = Vector3.new(856.896729 - (163 + 176), 423.21763599999997 - 274, 284.856842),
+                ["Basic_Diving_Gear"] = Vector3.new(1695.174774 - 1326, 132.508835, 75.70536799999999 + 173),
+                ["Fish_Radar"] = Vector3.new(2175.75177 - (1564 + 246), 134.50499, 619.105804 - (124 + 221))
+            }
+            local v201 = v200[v199]
+            if v201 then
+                local v272 = 0
+                local v273
+                while true do
+                    if (v272 == (451 - (115 + 336))) then
+                        v273 = game.Players.LocalPlayer
+                        if (v273 and v273.Character and v273.Character:FindFirstChild("HumanoidRootPart")) then
+                            v273.Character.HumanoidRootPart.CFrame = CFrame.new(v201)
+                        end
+                        break
+                    end
+                end
+            else
+                warn("Invalid item selected!")
+            end
+        end
+    }
+)
+local v136 =
+    v128.Performance:AddSlider(
+    "FPSCAP",
+    {
+        ["Title"] = "FPS",
+        ["Description"] = "FPS - (Max - 4000)",
+        ["Default"] = 132 - 72,
+        ["Min"] = 1 + 0,
+        ["Max"] = 4046 - (45 + 1),
+        ["Rounding"] = 1,
+        ["Callback"] = function(v202)
+            setfpscap(v202)
+        end
+    }
+)
+v128.Performance:AddButton(
+    {
+        ["Title"] = "Anti Lag",
+        ["Description"] = "Improves FPS by disabling certain effects and reducing quality.",
+        ["Callback"] = function()
+            local v203 = true
+            local v204 = game
+            local v205 = v204.Workspace
+            local v206 = v204.Lighting
+            local v207 = v205.Terrain
+            v207.WaterWaveSize = 0
+            v207.WaterWaveSpeed = 0
+            v207.WaterReflectance = 0
+            v207.WaterTransparency = 1990 - (1282 + 708)
+            v206.GlobalShadows = false
+            v206.FogEnd = 8999999488
+            v206.Brightness = 1212 - (583 + 629)
+            settings().Rendering.QualityLevel = "Level01"
+            for v247, v248 in pairs(v204:GetDescendants()) do
+                if (v248:IsA("Part") or v248:IsA("Union") or v248:IsA("CornerWedgePart") or v248:IsA("TrussPart")) then
+                    local v278 = 0
+                    local v279
+                    while true do
+                        if (v278 == 0) then
+                            v279 = 0
+                            while true do
+                                if (v279 == (1170 - (943 + 227))) then
+                                    v248.Material = "Plastic"
+                                    v248.Reflectance = 0
+                                    break
+                                end
+                            end
+                            break
+                        end
+                    end
+                elseif (v248:IsA("Decal") or (v248:IsA("Texture") and v203)) then
+                    v248.Transparency = 1632 - (1539 + 92)
+                elseif (v248:IsA("ParticleEmitter") or v248:IsA("Trail")) then
+                    v248.Lifetime = NumberRange.new(1946 - (706 + 1240))
+                elseif v248:IsA("Explosion") then
+                    local v383 = 258 - (81 + 177)
+                    while true do
+                        if ((0) == v383) then
+                            v248.BlastPressure = 258 - (212 + 45)
+                            v248.BlastRadius = 3 - 2
+                            break
+                        end
+                    end
+                elseif (v248:IsA("Fire") or v248:IsA("SpotLight") or v248:IsA("Smoke")) then
+                    v248.Enabled = false
+                elseif v248:IsA("MeshPart") then
+                    v248.Material = "Plastic"
+                    v248.Reflectance = 0
+                    v248.TextureID = 10385902758728956
+                end
+            end
+            for v249, v250 in pairs(v206:GetChildren()) do
+                if
+                    (v250:IsA("BlurEffect") or v250:IsA("SunRaysEffect") or v250:IsA("ColorCorrectionEffect") or
+                        v250:IsA("BloomEffect") or
+                        v250:IsA("DepthOfFieldEffect"))
+                 then
+                    v250.Enabled = false
+                end
+            end
+            print("Anti Lag settings applied!")
+        end
+    }
+)
+local v142 = game:GetService("Players")
+local v143 = v142.LocalPlayer
+local function v144(v216)
+    if v216 then
+        for v281, v282 in ipairs(v216:GetDescendants()) do
+            if (v282:IsA("BasePart") and (v282.Name ~= "HumanoidRootPart")) then
+                local v325 = 1946 - (708 + 1238)
+                while true do
+                    if (v325 == 0) then
+                        v282.Transparency = 1 + 0
+                        v282.CanCollide = false
+                        break
+                    end
+                end
+            elseif v282:IsA("Decal") then
+                v282.Transparency = 1668 - (586 + 1081)
+            elseif (v282:IsA("Accessory") and v282:FindFirstChild("Handle")) then
+                v282.Handle.Transparency = 512 - (348 + 163)
+                v282.Handle.CanCollide = false
+            end
+        end
+    end
+end
+local function v145(v217)
+    if v217 then
+        for v283, v284 in ipairs(v217:GetDescendants()) do
+            if (v284:IsA("BasePart") and (v284.Name ~= "HumanoidRootPart")) then
+                v284.Transparency = 0
+                v284.CanCollide = true
+            elseif v284:IsA("Decal") then
+                v284.Transparency = 280 - (215 + 65)
+            elseif (v284:IsA("Accessory") and v284:FindFirstChild("Handle")) then
+                local v386 = 0
+                while true do
+                    if (v386 == (1859 - (1541 + 318))) then
+                        v284.Handle.Transparency = 0
+                        v284.Handle.CanCollide = true
+                        break
+                    end
+                end
+            end
+        end
+    end
+end
+local v146 =
+    v128.Performance:AddToggle(
+    "HidePlayersToggle",
+    {
+        ["Title"] = "Hide Other Players",
+        ["Description"] = "Toggle to hide or show other players in the game.",
+        ["Default"] = false,
+        ["Callback"] = function(v218)
+            for v251, v252 in ipairs(v142:GetPlayers()) do
+                if (v252 ~= v143) then
+                    v252.CharacterAdded:Connect(
+                        function(v303)
+                            if v218 then
+                                v144(v303)
+                            else
+                                v145(v303)
+                            end
+                        end
+                    )
+                    if v252.Character then
+                        if v218 then
+                            v144(v252.Character)
+                        else
+                            v145(v252.Character)
+                        end
+                    end
+                end
+            end
+        end
+    }
+)
+local function v147()
+    local v219 = game.Workspace
+    local v220 = game.Lighting
+    local v221 = v219.Terrain
+    v221.WaterWaveSize = 0
+    v221.WaterWaveSpeed = 0
+    v221.WaterReflectance = 0
+    v221.WaterTransparency = 1750 - (1036 + 714)
+    v220.GlobalShadows = false
+    v220.FogEnd = 8999999488
+    v220.Brightness = 0
+    settings().Rendering.QualityLevel = "Level01"
+    for v253, v254 in pairs(game:GetDescendants()) do
+        if (v254:IsA("BasePart") or v254:IsA("MeshPart")) then
+            local v285 = 0
+            while true do
+                if (v285 == 1) then
+                    v254.CastShadow = false
+                    break
+                end
+                if (v285 == 0) then
+                    v254.Material = "SmoothPlastic"
+                    v254.Reflectance = 1280 - (883 + 397)
+                    v285 = 591 - (563 + 27)
+                end
+            end
+        elseif v254:IsA("Decal") then
+            v254.Transparency = 1
+        elseif (v254:IsA("ParticleEmitter") or v254:IsA("Trail")) then
+            v254.Lifetime = NumberRange.new(0)
+        elseif v254:IsA("Explosion") then
+            local v387 = 1986 - (1369 + 617)
+            while true do
+                if (v387 == (1487 - (85 + 1402))) then
+                    v254.BlastPressure = 1 + 0
+                    v254.BlastRadius = 2 - 1
+                    break
+                end
+            end
+        elseif (v254:IsA("Fire") or v254:IsA("SpotLight") or v254:IsA("Smoke")) then
+            v254.Enabled = false
+        end
+    end
+    for v255, v256 in pairs(v220:GetChildren()) do
+        if (v256:IsA("PostEffect") or v256:IsA("DepthOfFieldEffect")) then
+            v256.Enabled = false
+        end
+    end
+end
+v128.Performance:AddButton(
+    {
+        ["Title"] = "1-Click FPS Boost",
+        ["Description"] = "Improves FPS by applying optimizations.",
+        ["Callback"] = function()
+            v147()
+        end
+    }
+)
