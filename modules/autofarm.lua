@@ -211,13 +211,12 @@ function autofarm.startAutoShake(mode)
     autofarm.autoShakeEnabled = true
     autofarm.shakeMode = mode or 1
     
-    -- Function untuk handle shake
-    local function handleShake()
-        if not autofarm.autoShakeEnabled then return end
-        
-        local success, err = pcall(function()
-            if autofarm.shakeMode == 1 then
-                -- Mode 1: Method dari sanhub - menggunakan GuiService dan VirtualInputManager
+    if autofarm.shakeMode == 1 then
+        -- Mode 1: Method dari sanhub - RenderStepped checking
+        local function handleShake()
+            if not autofarm.autoShakeEnabled then return end
+            
+            local success, err = pcall(function()
                 local playerGui = player:WaitForChild("PlayerGui")
                 local shakeUI = playerGui:FindFirstChild("shakeui")
                 
@@ -237,27 +236,67 @@ function autofarm.startAutoShake(mode)
                         end
                     end
                 end
-                
-            elseif autofarm.shakeMode == 2 then
-                -- Mode 2: Method dari neoxhub - menggunakan tool shake event
+            end)
+            
+            if not success then
+                warn("Auto Shake Error: " .. tostring(err))
+            end
+        end
+        
+        -- Connect to RenderStepped untuk continuous checking
+        autofarm.shakeConnection = RunService.RenderStepped:Connect(handleShake)
+        
+    elseif autofarm.shakeMode == 2 then
+        -- Mode 2: Method dari neoxhub - DescendantAdded + tool shake event
+        
+        -- Method 1: GUI DescendantAdded (seperti neoxhub asli)
+        local function onDescendantAdded(descendant)
+            if not autofarm.autoShakeEnabled then return end
+            
+            local success, err = pcall(function()
+                if descendant.Name == "button" and descendant.Parent and descendant.Parent.Name == "safezone" then
+                    task.wait(0.3) -- Delay seperti neoxhub
+                    game:GetService("GuiService").SelectedObject = descendant
+                    
+                    local VirtualInputManager = game:GetService("VirtualInputManager")
+                    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
+                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
+                    
+                    task.wait(0.1)
+                    game:GetService("GuiService").SelectedObject = nil
+                    print("Shake performed (NeoxHub GUI method)")
+                end
+            end)
+            
+            if not success then
+                warn("Auto Shake GUI Error: " .. tostring(err))
+            end
+        end
+        
+        -- Method 2: Tool shake event (backup method)
+        local function handleToolShake()
+            if not autofarm.autoShakeEnabled then return end
+            
+            local success, err = pcall(function()
                 local tool = character:FindFirstChildOfClass("Tool")
                 if tool and tool:FindFirstChild("events") then
                     local shakeEvent = tool.events:FindFirstChild("shake")
                     if shakeEvent then
                         shakeEvent:FireServer()
-                        print("Shake performed (NeoxHub method)")
+                        print("Shake performed (NeoxHub Tool method)")
                     end
                 end
+            end)
+            
+            if not success then
+                warn("Auto Shake Tool Error: " .. tostring(err))
             end
-        end)
-        
-        if not success then
-            warn("Auto Shake Error: " .. tostring(err))
         end
+        
+        -- Connect both methods
+        autofarm.shakeConnection = player.PlayerGui.DescendantAdded:Connect(onDescendantAdded)
+        autofarm.shakeConnection2 = RunService.RenderStepped:Connect(handleToolShake)
     end
-    
-    -- Connect to RenderStepped untuk continuous checking
-    autofarm.shakeConnection = RunService.RenderStepped:Connect(handleShake)
     
     print("Auto Shake started with mode: " .. autofarm.shakeMode)
 end
@@ -265,10 +304,14 @@ end
 function autofarm.stopAutoShake()
     autofarm.autoShakeEnabled = false
     
-    -- Disconnect shake connection
+    -- Disconnect shake connections
     if autofarm.shakeConnection then
         autofarm.shakeConnection:Disconnect()
         autofarm.shakeConnection = nil
+    end
+    if autofarm.shakeConnection2 then
+        autofarm.shakeConnection2:Disconnect()
+        autofarm.shakeConnection2 = nil
     end
     
     print("Auto Shake stopped")
