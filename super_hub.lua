@@ -164,8 +164,11 @@ local function setupAutoShake()
     
     connections.autoShake = PlayerGUI.ChildAdded:Connect(function(GUI)
         if GUI:IsA("ScreenGui") and GUI.Name == "shakeui" then
-            if GUI:FindFirstChild("safezone") ~= nil then
-                GUI.safezone.ChildAdded:Connect(function(child)
+            -- Safely check for safezone existence with pcall
+            pcall(function()
+                local safeZone = GUI:FindFirstChild("safezone")
+                if safeZone ~= nil then
+                    safeZone.ChildAdded:Connect(function(child)
                     if child:IsA("ImageButton") and child.Name == "button" then
                         if Config.AutoShake.enabled == true then
                             local currentDelay = getDelayForFeature("AutoShake")
@@ -177,9 +180,11 @@ local function setupAutoShake()
                                     VirtualInputManager:SendMouseButtonEvent(pos.X + size.X / 2, pos.Y + size.Y / 2, 0, true, LocalPlayer, 0)
                                     VirtualInputManager:SendMouseButtonEvent(pos.X + size.X / 2, pos.Y + size.Y / 2, 0, false, LocalPlayer, 0)
                                 elseif Config.AutoShake.method == "KeyCodeEvent" then
-                                    while WaitForSomeone(RunService.RenderStepped) do
-                                        if Config.AutoShake.enabled and GUI.safezone:FindFirstChild(child.Name) ~= nil then
-                                            task.wait()
+                                    local shakingConnection
+                                    shakingConnection = RunService.Heartbeat:Connect(function()
+                                        -- Safely check for safezone existence
+                                        local currentSafeZone = GUI:FindFirstChild("safezone")
+                                        if Config.AutoShake.enabled and currentSafeZone and currentSafeZone:FindFirstChild(child.Name) ~= nil then
                                             pcall(function()
                                                 GuiService.SelectedObject = child
                                                 if GuiService.SelectedObject == child then
@@ -188,16 +193,18 @@ local function setupAutoShake()
                                                 end
                                             end)
                                         else
-                                            GuiService.SelectedObject = nil
-                                            break
+                                            if shakingConnection then
+                                                shakingConnection:Disconnect()
+                                            end
                                         end
-                                    end
+                                    end)
                                 end
                             end
                         end
                     end
                 end)
             end
+            end) -- End pcall
         end
     end)
 end
