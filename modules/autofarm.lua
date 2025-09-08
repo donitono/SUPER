@@ -361,7 +361,7 @@ function autofarm.startAutoReel(mode)
         end)
         
     elseif autofarm.reelMode == 2 then
-        -- Mode 2: Normal - buat bar putih jadi full
+        -- Mode 2: Normal - tekan space untuk maintain progress (tidak bisa full)
         spawn(function()
             while autofarm.autoReelEnabled do
                 local success, err = pcall(function()
@@ -371,11 +371,13 @@ function autofarm.startAutoReel(mode)
                     if reel then
                         local bar = reel:FindFirstChild("bar")
                         if bar and bar.Visible then
-                            -- Normal mode - simulate space press untuk fill bar
+                            -- Normal mode - tekan space secara kontinu untuk maintain progress
+                            -- Karena bar tidak bisa full, kita tekan space dengan interval
                             UserInputService:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-                            wait(0.05)
+                            wait(0.01)
                             UserInputService:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
-                            print("Reel: Normal mode - Space pressed")
+                            print("Reel: Normal mode - Space pressed (maintain progress)")
+                            wait(0.1) -- Interval antar press
                         end
                     end
                 end)
@@ -384,12 +386,12 @@ function autofarm.startAutoReel(mode)
                     warn("Auto Reel Normal Error: " .. tostring(err))
                 end
                 
-                wait(0.1)
+                wait(0.05)
             end
         end)
         
     elseif autofarm.reelMode == 3 then
-        -- Mode 3: Legit - mengikuti garis hitam agar tetap di bar putih
+        -- Mode 3: Legit - simulasi human behavior dengan timing yang realistis
         spawn(function()
             while autofarm.autoReelEnabled do
                 local success, err = pcall(function()
@@ -398,27 +400,25 @@ function autofarm.startAutoReel(mode)
                     
                     if reel then
                         local bar = reel:FindFirstChild("bar")
-                        local pointer = reel:FindFirstChild("pointer") -- Garis hitam yang bergerak
-                        local safezone = reel:FindFirstChild("safezone") -- Bar putih
-                        
-                        if bar and bar.Visible and pointer and safezone then
-                            -- Legit mode - monitor posisi pointer vs safezone
-                            local pointerPos = pointer.Position.X.Scale
-                            local safezoneStart = safezone.Position.X.Scale
-                            local safezoneEnd = safezoneStart + safezone.Size.X.Scale
+                        if bar and bar.Visible then
+                            -- Legit mode - simulasi human reaction time
+                            -- Random delay untuk simulate human reaction (0.1-0.3 detik)
+                            local humanDelay = math.random(100, 300) / 1000
+                            wait(humanDelay)
                             
-                            -- Jika pointer mendekati batas safezone, tekan space
-                            if pointerPos >= safezoneStart and pointerPos <= safezoneEnd then
-                                -- Pointer dalam safezone - aman
-                                wait(0.02)
-                            else
-                                -- Pointer di luar safezone - tekan space untuk menyesuaikan
-                                UserInputService:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-                                wait(0.01)
-                                UserInputService:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
-                                print("Reel: Legit mode - Adjusting position")
-                                wait(0.05)
-                            end
+                            -- Tekan space dengan timing yang tidak perfect
+                            UserInputService:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+                            
+                            -- Random hold time (0.01-0.05 detik)
+                            local holdTime = math.random(10, 50) / 1000
+                            wait(holdTime)
+                            
+                            UserInputService:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+                            print("Reel: Legit mode - Human-like space press")
+                            
+                            -- Random pause antar press (0.05-0.15 detik)
+                            local pauseTime = math.random(50, 150) / 1000
+                            wait(pauseTime)
                         end
                     end
                 end)
@@ -427,7 +427,7 @@ function autofarm.startAutoReel(mode)
                     warn("Auto Reel Legit Error: " .. tostring(err))
                 end
                 
-                wait(0.02) -- Faster checking untuk responsivitas
+                wait(0.02)
             end
         end)
         
@@ -574,5 +574,16 @@ end
 
 -- Initialize
 handleCharacterRespawn()
+
+-- Monitor finishedloading event (untuk debug)
+spawn(function()
+    local events = ReplicatedStorage:WaitForChild("events")
+    local finishedloadingEvent = events:WaitForChild("finishedloading")
+    
+    finishedloadingEvent.OnClientEvent:Connect(function(...)
+        local args = {...}
+        print("🔍 FinishedLoading Event fired with args:", table.concat(args, ", "))
+    end)
+end)
 
 return autofarm
