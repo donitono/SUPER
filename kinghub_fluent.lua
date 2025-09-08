@@ -1,8 +1,8 @@
 -- KingHub with Fluent UI
 -- Based on original kinghub.lua, modified to use fluent.lua for UI
 
--- Load Fluent UI from local fluent.lua
-local Fluent = loadstring(readfile("fluent.lua"))()
+-- Load Fluent UI from GitHub (supports online loading)
+local Fluent = loadstring(game:HttpGet("https://raw.githubusercontent.com/donitono/SUPER/main/fluent.lua"))()
 
 local Library = Fluent.Library
 local ThemeManager = Fluent.ThemeManager
