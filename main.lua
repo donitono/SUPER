@@ -26,12 +26,12 @@ local AutofarmSection = AutofarmTab:NewSection("Fishing Automation")
 
 -- Cast Mode Selection
 local currentCastMode = 1
-AutofarmSection:NewDropdown("Cast Mode", "Select auto cast mode", {"Mode 1 (Legit)", "Mode 2 (Rage)", "Mode 3 (Random)"}, function(option)
-    if option == "Mode 1 (Legit)" then
+AutofarmSection:NewDropdown("Cast Mode", "Select auto cast mode", {"Mode 1 (Legit - Perfect)", "Mode 2 (Rage - Instant)", "Mode 3 (Random - Variable)"}, function(option)
+    if option == "Mode 1 (Legit - Perfect)" then
         currentCastMode = 1
-    elseif option == "Mode 2 (Rage)" then
+    elseif option == "Mode 2 (Rage - Instant)" then
         currentCastMode = 2
-    elseif option == "Mode 3 (Random)" then
+    elseif option == "Mode 3 (Random - Variable)" then
         currentCastMode = 3
     end
     autofarm.setCastMode(currentCastMode)

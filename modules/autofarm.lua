@@ -38,11 +38,11 @@ function autofarm.startAutoCast(mode)
                 
                 local success, err = pcall(function()
                     if autofarm.castMode == 1 then
-                        -- Mode 1: Legit - simulate mouse click dan monitor power bar
+                        -- Mode 1: Legit - simulate mouse click dan tunggu full power
                         local VirtualInputManager = game:GetService("VirtualInputManager")
                         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, player, 0)
                         
-                        -- Monitor power bar untuk release
+                        -- Monitor power bar untuk release saat FULL (seperti kinghub)
                         local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
                         if humanoidRootPart then
                             local powerConnection
@@ -52,8 +52,8 @@ function autofarm.startAutoCast(mode)
                                     if powerbar and powerbar:FindFirstChild("bar") then
                                         local barConnection
                                         barConnection = powerbar.bar:GetPropertyChangedSignal("Size"):Connect(function()
-                                            local targetSize = math.random(85, 95) / 100 -- Legit range
-                                            if powerbar.bar.Size.X.Scale >= targetSize then
+                                            -- Release saat mencapai FULL power (100%) seperti kinghub
+                                            if powerbar.bar.Size == UDim2.new(1, 0, 1, 0) then
                                                 VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, player, 0)
                                                 barConnection:Disconnect()
                                                 powerConnection:Disconnect()
@@ -69,7 +69,7 @@ function autofarm.startAutoCast(mode)
                         castEvent:FireServer(100)
                         
                     elseif autofarm.castMode == 3 then
-                        -- Mode 3: Random - legit with random timing
+                        -- Mode 3: Random - legit with random timing (85-100%)
                         local VirtualInputManager = game:GetService("VirtualInputManager")
                         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, player, 0)
                         
@@ -81,9 +81,10 @@ function autofarm.startAutoCast(mode)
                                     local powerbar = powerChild:FindFirstChild("powerbar")
                                     if powerbar and powerbar:FindFirstChild("bar") then
                                         local barConnection
+                                        -- Random target antara 85-100% untuk variasi
+                                        local randomTarget = math.random(85, 100) / 100
                                         barConnection = powerbar.bar:GetPropertyChangedSignal("Size"):Connect(function()
-                                            local targetSize = math.random(70, 100) / 100 -- Random range
-                                            if powerbar.bar.Size.X.Scale >= targetSize then
+                                            if powerbar.bar.Size.X.Scale >= randomTarget then
                                                 VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, player, 0)
                                                 barConnection:Disconnect()
                                                 powerConnection:Disconnect()
@@ -116,7 +117,7 @@ function autofarm.startAutoCast(mode)
                     
                     local success, err = pcall(function()
                         if autofarm.castMode == 1 then
-                            -- Legit mode recast
+                            -- Legit mode recast - tunggu full power seperti kinghub
                             local VirtualInputManager = game:GetService("VirtualInputManager")
                             VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, player, 0)
                             
@@ -129,8 +130,8 @@ function autofarm.startAutoCast(mode)
                                         if powerbar and powerbar:FindFirstChild("bar") then
                                             local barConnection
                                             barConnection = powerbar.bar:GetPropertyChangedSignal("Size"):Connect(function()
-                                                local targetSize = math.random(85, 95) / 100
-                                                if powerbar.bar.Size.X.Scale >= targetSize then
+                                                -- Release saat mencapai FULL power (100%) seperti kinghub
+                                                if powerbar.bar.Size == UDim2.new(1, 0, 1, 0) then
                                                     VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, player, 0)
                                                     barConnection:Disconnect()
                                                     powerConnection:Disconnect()
@@ -146,7 +147,7 @@ function autofarm.startAutoCast(mode)
                             castEvent:FireServer(100)
                             
                         elseif autofarm.castMode == 3 then
-                            -- Random mode recast
+                            -- Random mode recast - random target 85-100%
                             local VirtualInputManager = game:GetService("VirtualInputManager")
                             VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, player, 0)
                             
@@ -158,9 +159,10 @@ function autofarm.startAutoCast(mode)
                                         local powerbar = powerChild:FindFirstChild("powerbar")
                                         if powerbar and powerbar:FindFirstChild("bar") then
                                             local barConnection
+                                            -- Random target antara 85-100% untuk variasi
+                                            local randomTarget = math.random(85, 100) / 100
                                             barConnection = powerbar.bar:GetPropertyChangedSignal("Size"):Connect(function()
-                                                local targetSize = math.random(70, 100) / 100
-                                                if powerbar.bar.Size.X.Scale >= targetSize then
+                                                if powerbar.bar.Size.X.Scale >= randomTarget then
                                                     VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, player, 0)
                                                     barConnection:Disconnect()
                                                     powerConnection:Disconnect()
