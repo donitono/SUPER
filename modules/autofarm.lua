@@ -304,6 +304,9 @@ function autofarm.stopAutoReel()
     autofarm.autoReelEnabled = false
     print("Auto Reel stopped")
 end
+
+-- Auto Reel dengan 2 mode  
+function autofarm.startAutoReel(mode)
     autofarm.autoReelEnabled = true
     autofarm.reelMode = mode or 1
     
@@ -455,59 +458,6 @@ end
         end
     end)
 end
-    autofarm.autoReelEnabled = true
-    
-    spawn(function()
-        while autofarm.autoReelEnabled do
-            local success, err = pcall(function()
-                -- Method dari sanhub
-                local playerGui = player:WaitForChild("PlayerGui")
-                local reel = playerGui:FindFirstChild("reel")
-                
-                if reel then
-                    local bar = reel:FindFirstChild("bar")
-                    if bar and bar.Visible then
-                        -- Auto reel ketika bar muncul
-                        local reelEvent = ReplicatedStorage:FindFirstChild("events")
-                        if reelEvent then
-                            local reelAction = reelEvent:FindFirstChild("reelfinished")
-                            if reelAction then
-                                reelAction:FireServer(100, true) -- Perfect reel
-                            end
-                        end
-                        
-                        -- Alternative method - simulate space key press
-                        UserInputService:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-                        wait(0.05)
-                        UserInputService:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
-                    end
-                end
-                
-                -- Backup method - check for reel prompt
-                local reelPrompt = playerGui:FindFirstChild("ReelPrompt")
-                if reelPrompt and reelPrompt.Visible then
-                    local reelEvent = ReplicatedStorage:FindFirstChild("events")
-                    if reelEvent then
-                        local reel = reelEvent:FindFirstChild("reel")
-                        if reel then
-                            reel:FireServer()
-                        end
-                    end
-                end
-            end)
-            
-            if not success then
-                warn("Auto Reel Error: " .. tostring(err))
-            end
-            
-            wait(0.1)
-        end
-    end)
-end
-
-function autofarm.stopAutoReel()
-    autofarm.autoReelEnabled = false
-end
 
 -- Always Catch (dari sanhub)
 function autofarm.startAlwaysCatch()
@@ -606,6 +556,7 @@ function autofarm.stopAll()
     autofarm.stopAlwaysCatch()
 end
 
+-- Error handling dan reconnection
 -- Error handling dan reconnection
 local function handleCharacterRespawn()
     player.CharacterAdded:Connect(function(newCharacter)
