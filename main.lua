@@ -71,11 +71,27 @@ AutofarmSection:NewToggle("Auto Shake", "Automatically shake when needed", funct
     end
 end)
 
+-- Reel Mode Selection
+local currentReelMode = 1
+AutofarmSection:NewDropdown("Reel Mode", "Select auto reel mode", {"Mode 1 (Faster - Instant)", "Mode 2 (Normal - Fill Bar)", "Mode 3 (Legit - Follow Line)", "Mode 4 (Fail - No Action)"}, function(option)
+    if option == "Mode 1 (Faster - Instant)" then
+        currentReelMode = 1
+    elseif option == "Mode 2 (Normal - Fill Bar)" then
+        currentReelMode = 2
+    elseif option == "Mode 3 (Legit - Follow Line)" then
+        currentReelMode = 3
+    elseif option == "Mode 4 (Fail - No Action)" then
+        currentReelMode = 4
+    end
+    autofarm.setReelMode(currentReelMode)
+    print("Reel Mode changed to: " .. currentReelMode)
+end)
+
 -- Auto Reel
 AutofarmSection:NewToggle("Auto Reel", "Automatically reel in fish", function(state)
     if state then
-        autofarm.startAutoReel()
-        print("Auto Reel: Enabled")
+        autofarm.startAutoReel(currentReelMode)
+        print("Auto Reel: Enabled (Mode " .. currentReelMode .. ")")
     else
         autofarm.stopAutoReel()
         print("Auto Reel: Disabled")
@@ -97,9 +113,8 @@ end)
 local QuickSection = AutofarmTab:NewSection("Quick Actions")
 
 QuickSection:NewButton("Start All Autofarm", "Enable all autofarm features", function()
-    autofarm.startAll(currentShakeMode, currentCastMode)
-    print("All Autofarm Features: Enabled")
-    print("Cast Mode: " .. currentCastMode .. ", Shake Mode: " .. currentShakeMode)
+    autofarm.startAll(currentShakeMode, currentCastMode, currentReelMode)
+    print("All Autofarm: Started with Cast Mode " .. currentCastMode .. ", Shake Mode " .. currentShakeMode .. ", Reel Mode " .. currentReelMode)
 end)
 
 QuickSection:NewButton("Stop All Autofarm", "Disable all autofarm features", function()

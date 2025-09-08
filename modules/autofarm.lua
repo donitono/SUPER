@@ -21,6 +21,7 @@ autofarm.autoReelEnabled = false
 autofarm.alwaysCatchEnabled = false
 autofarm.shakeMode = 1 -- 1 = sanhub method, 2 = neoxhub method
 autofarm.castMode = 1 -- 1 = legit, 2 = rage, 3 = random
+autofarm.reelMode = 1 -- 1 = faster, 2 = normal, 3 = legit, 4 = fail
 
 -- Auto Cast (dari kinghub dengan metodenya)
 function autofarm.startAutoCast(mode)
@@ -322,56 +323,122 @@ function autofarm.stopAutoShake()
     print("Auto Shake stopped")
 end
 
--- Auto Reel (dari sanhub)
-function autofarm.startAutoReel()
+-- Auto Reel dengan 4 mode
+function autofarm.startAutoReel(mode)
     autofarm.autoReelEnabled = true
+    autofarm.reelMode = mode or 1
     
-    spawn(function()
-        while autofarm.autoReelEnabled do
-            local success, err = pcall(function()
-                -- Method dari sanhub
-                local playerGui = player:WaitForChild("PlayerGui")
-                local reel = playerGui:FindFirstChild("reel")
-                
-                if reel then
-                    local bar = reel:FindFirstChild("bar")
-                    if bar and bar.Visible then
-                        -- Auto reel ketika bar muncul
-                        local reelEvent = ReplicatedStorage:FindFirstChild("events")
-                        if reelEvent then
-                            local reelAction = reelEvent:FindFirstChild("reelfinished")
-                            if reelAction then
-                                reelAction:FireServer(100, true) -- Perfect reel
+    if autofarm.reelMode == 1 then
+        -- Mode 1: Faster - langsung perfect seperti sekarang
+        spawn(function()
+            while autofarm.autoReelEnabled do
+                local success, err = pcall(function()
+                    local playerGui = player:WaitForChild("PlayerGui")
+                    local reel = playerGui:FindFirstChild("reel")
+                    
+                    if reel then
+                        local bar = reel:FindFirstChild("bar")
+                        if bar and bar.Visible then
+                            -- Faster mode - langsung perfect
+                            local reelEvent = ReplicatedStorage:FindFirstChild("events")
+                            if reelEvent then
+                                local reelAction = reelEvent:FindFirstChild("reelfinished")
+                                if reelAction then
+                                    reelAction:FireServer(100, true) -- Perfect reel
+                                    print("Reel: Faster mode - Perfect!")
+                                end
                             end
                         end
-                        
-                        -- Alternative method - simulate space key press
-                        UserInputService:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-                        wait(0.05)
-                        UserInputService:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
                     end
+                end)
+                
+                if not success then
+                    warn("Auto Reel Faster Error: " .. tostring(err))
                 end
                 
-                -- Backup method - check for reel prompt
-                local reelPrompt = playerGui:FindFirstChild("ReelPrompt")
-                if reelPrompt and reelPrompt.Visible then
-                    local reelEvent = ReplicatedStorage:FindFirstChild("events")
-                    if reelEvent then
-                        local reel = reelEvent:FindFirstChild("reel")
-                        if reel then
-                            reel:FireServer()
+                wait(0.1)
+            end
+        end)
+        
+    elseif autofarm.reelMode == 2 then
+        -- Mode 2: Normal - buat bar putih jadi full
+        spawn(function()
+            while autofarm.autoReelEnabled do
+                local success, err = pcall(function()
+                    local playerGui = player:WaitForChild("PlayerGui")
+                    local reel = playerGui:FindFirstChild("reel")
+                    
+                    if reel then
+                        local bar = reel:FindFirstChild("bar")
+                        if bar and bar.Visible then
+                            -- Normal mode - simulate space press untuk fill bar
+                            UserInputService:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+                            wait(0.05)
+                            UserInputService:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+                            print("Reel: Normal mode - Space pressed")
                         end
                     end
+                end)
+                
+                if not success then
+                    warn("Auto Reel Normal Error: " .. tostring(err))
                 end
-            end)
-            
-            if not success then
-                warn("Auto Reel Error: " .. tostring(err))
+                
+                wait(0.1)
             end
-            
-            wait(0.1)
-        end
-    end)
+        end)
+        
+    elseif autofarm.reelMode == 3 then
+        -- Mode 3: Legit - mengikuti garis hitam agar tetap di bar putih
+        spawn(function()
+            while autofarm.autoReelEnabled do
+                local success, err = pcall(function()
+                    local playerGui = player:WaitForChild("PlayerGui")
+                    local reel = playerGui:FindFirstChild("reel")
+                    
+                    if reel then
+                        local bar = reel:FindFirstChild("bar")
+                        local pointer = reel:FindFirstChild("pointer") -- Garis hitam yang bergerak
+                        local safezone = reel:FindFirstChild("safezone") -- Bar putih
+                        
+                        if bar and bar.Visible and pointer and safezone then
+                            -- Legit mode - monitor posisi pointer vs safezone
+                            local pointerPos = pointer.Position.X.Scale
+                            local safezoneStart = safezone.Position.X.Scale
+                            local safezoneEnd = safezoneStart + safezone.Size.X.Scale
+                            
+                            -- Jika pointer mendekati batas safezone, tekan space
+                            if pointerPos >= safezoneStart and pointerPos <= safezoneEnd then
+                                -- Pointer dalam safezone - aman
+                                wait(0.02)
+                            else
+                                -- Pointer di luar safezone - tekan space untuk menyesuaikan
+                                UserInputService:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+                                wait(0.01)
+                                UserInputService:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+                                print("Reel: Legit mode - Adjusting position")
+                                wait(0.05)
+                            end
+                        end
+                    end
+                end)
+                
+                if not success then
+                    warn("Auto Reel Legit Error: " .. tostring(err))
+                end
+                
+                wait(0.02) -- Faster checking untuk responsivitas
+            end
+        end)
+        
+    elseif autofarm.reelMode == 4 then
+        -- Mode 4: Fail - tidak melakukan apa-apa
+        print("Reel: Fail mode - No action taken (will fail)")
+        -- Tidak ada action, biarkan minigame gagal
+        
+    end
+    
+    print("Auto Reel started with mode: " .. autofarm.reelMode)
 end
 
 function autofarm.stopAutoReel()
@@ -446,6 +513,16 @@ function autofarm.setCastMode(mode)
     end
 end
 
+function autofarm.setReelMode(mode)
+    if mode == 1 or mode == 2 or mode == 3 or mode == 4 then
+        autofarm.reelMode = mode
+        return true
+    else
+        warn("Invalid reel mode. Use 1 (faster), 2 (normal), 3 (legit), or 4 (fail)")
+        return false
+    end
+end
+
 function autofarm.getStatus()
     return {
         autoCast = autofarm.autoCastEnabled,
@@ -453,17 +530,19 @@ function autofarm.getStatus()
         autoReel = autofarm.autoReelEnabled,
         alwaysCatch = autofarm.alwaysCatchEnabled,
         shakeMode = autofarm.shakeMode,
-        castMode = autofarm.castMode
+        castMode = autofarm.castMode,
+        reelMode = autofarm.reelMode
     }
 end
 
 -- Start all autofarm features
-function autofarm.startAll(shakeMode, castMode)
+function autofarm.startAll(shakeMode, castMode, reelMode)
     shakeMode = shakeMode or 1
     castMode = castMode or 1
+    reelMode = reelMode or 1
     autofarm.startAutoCast(castMode)
     autofarm.startAutoShake(shakeMode)
-    autofarm.startAutoReel()
+    autofarm.startAutoReel(reelMode)
     autofarm.startAlwaysCatch()
 end
 
@@ -487,7 +566,7 @@ local function handleCharacterRespawn()
             wait(2) -- Wait for character to load
             if status.autoCast then autofarm.startAutoCast(status.castMode) end
             if status.autoShake then autofarm.startAutoShake(status.shakeMode) end
-            if status.autoReel then autofarm.startAutoReel() end
+            if status.autoReel then autofarm.startAutoReel(status.reelMode) end
             if status.alwaysCatch then autofarm.startAlwaysCatch() end
         end
     end)
