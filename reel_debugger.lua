@@ -2,26 +2,12 @@
 -- Script untuk monitoring minigame reel dan mendeteksi events/modules yang digunakan
 -- Jalankan script ini lalu masuk ke minigame reel untuk melihat data
 
--- Safe service loading dengan error handling
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-
--- Optional services (mungkin tidak tersedia di semua executor)
-local CoreGui, UserInputService, HttpService
-local success1, err1 = pcall(function()
-    CoreGui = game:GetService("CoreGui")
-end)
-local success2, err2 = pcall(function()
-    UserInputService = game:GetService("UserInputService")
-end)
-local success3, err3 = pcall(function()
-    HttpService = game:GetService("HttpService")
-end)
-
-if not success1 then print("CoreGui not available:", err1) end
-if not success2 then print("UserInputService not available:", err2) end
-if not success3 then print("HttpService not available:", err3) end
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -31,42 +17,11 @@ local logData = {}
 local maxLogEntries = 1000
 local debugUI = nil
 
--- Safe date functions untuk compatibility
-local function getSafeTimestamp()
-    if os and os.date then
-        local success, result = pcall(function()
-            return os.date("%H:%M:%S")
-        end)
-        if success then return result end
-    end
-    return "00:00:00"
-end
-
-local function getSafeDate()
-    if os and os.date then
-        local success, result = pcall(function()
-            return os.date("%Y-%m-%d %H:%M:%S")
-        end)
-        if success then return result end
-    end
-    return "1970-01-01 00:00:00"
-end
-
-local function getSafeFilename()
-    if os and os.date then
-        local success, result = pcall(function()
-            return os.date("%Y%m%d_%H%M%S")
-        end)
-        if success then return result end
-    end
-    return "19700101_000000"
-end
-
 -- Function untuk add log entry
 local function addLog(message, category)
     category = category or "INFO"
-    local timestamp = getSafeTimestamp()
-    local logEntry = "[" .. timestamp .. "] [" .. category .. "] " .. message
+    local timestamp = tick() -- Gunakan tick() sebagai ganti os.date()
+    local logEntry = "[" .. math.floor(timestamp) .. "] [" .. category .. "] " .. message
     
     table.insert(logData, logEntry)
     print(logEntry)
@@ -84,11 +39,6 @@ end
 
 -- Function untuk create debug UI
 local function createDebugUI()
-    if not CoreGui then
-        addLog("⚠️ CoreGui not available - UI disabled", "WARNING")
-        return nil, nil
-    end
-    
     if debugUI and debugUI.Parent then
         debugUI:Destroy()
     end
@@ -200,7 +150,7 @@ local function createDebugUI()
     saveButton.Size = UDim2.new(0, 100, 1, 0)
     saveButton.Position = UDim2.new(0, 0, 0, 0)
     saveButton.BackgroundColor3 = Color3.new(0.2, 0.6, 0.2)
-    saveButton.Text = "💾 Save Log"
+    saveButton.Text = "💾 Save txt"
     saveButton.TextColor3 = Color3.new(1, 1, 1)
     saveButton.TextScaled = true
     saveButton.Font = Enum.Font.SourceSansBold
@@ -246,42 +196,21 @@ local function createDebugUI()
     testButton.BorderSizePixel = 0
     testButton.Parent = buttonFrame
     
-    -- Button connections with error protection
+    -- Button connections
     saveButton.MouseButton1Click:Connect(function()
-        local success, err = pcall(function()
-            saveLogToFile()
-        end)
-        if not success then
-            addLog("❌ Save button error: " .. tostring(err), "ERROR")
-            print("Save error:", err)
-        end
+        saveLogToFile()
     end)
     
     clearButton.MouseButton1Click:Connect(function()
-        local success, err = pcall(function()
-            clearLogs()
-        end)
-        if not success then
-            addLog("❌ Clear button error: " .. tostring(err), "ERROR")
-        end
+        clearLogs()
     end)
     
     analyzeButton.MouseButton1Click:Connect(function()
-        local success, err = pcall(function()
-            analyzeCurrentReel()
-        end)
-        if not success then
-            addLog("❌ Analyze button error: " .. tostring(err), "ERROR")
-        end
+        analyzeCurrentReel()
     end)
     
     testButton.MouseButton1Click:Connect(function()
-        local success, err = pcall(function()
-            testReelEvents()
-        end)
-        if not success then
-            addLog("❌ Test button error: " .. tostring(err), "ERROR")
-        end
+        testReelEvents()
     end)
     
     return mainFrame.StatusLabel, logFrame.LogText
@@ -310,215 +239,31 @@ end
 
 -- Function untuk save log to file
 local function saveLogToFile()
-    addLog("💾 Starting save operation...", "SYSTEM")
-    
     local success, err = pcall(function()
-        local fileName = "ReelDebugLog_" .. getSafeFilename() .. ".txt"
+        local fileName = "ReelDebugLog.txt" -- Nama file sederhana
         local content = "=== REEL DEBUGGER LOG ===\n"
-        content = content .. "Generated: " .. getSafeDate() .. "\n"
-        content = content .. "Player: " .. (player and player.Name or "Unknown") .. "\n"
+        content = content .. "Generated at tick: " .. tick() .. "\n"
+        content = content .. "Player: " .. player.Name .. "\n"
         content = content .. "Total Entries: " .. #logData .. "\n\n"
+        content = content .. table.concat(logData, "\n")
         
-        if #logData > 0 then
-            content = content .. table.concat(logData, "\n")
-        else
-            content = content .. "No log entries found."
-        end
-        
-        addLog("📄 Content prepared (" .. string.len(content) .. " chars)", "INFO")
-        
-        local saveMethod = "none"
-        
-        -- Method 1: Try writefile with multiple paths
+        -- Gunakan metode yang sama seperti dump.lua
         if writefile then
-            addLog("🔧 Testing writefile paths...", "INFO")
-            local paths = {
-                fileName,
-                "workspace/" .. fileName,
-                "/sdcard/Download/" .. fileName,
-                "/storage/emulated/0/Download/" .. fileName,
-                "Documents/" .. fileName
-            }
-            
-            for i, path in ipairs(paths) do
-                local success2, err2 = pcall(function()
-                    writefile(path, content)
-                end)
-                if success2 then
-                    saveMethod = "file"
-                    addLog("✅ Saved to: " .. path, "SUCCESS")
-                    break
-                else
-                    addLog("❌ Path " .. i .. " failed: " .. tostring(err2), "DEBUG")
-                end
-            end
-        end
-        
-        -- Method 2: Try clipboard if file failed
-        if saveMethod == "none" and setclipboard then
-            addLog("🔧 Trying clipboard...", "INFO")
-            local success3, err3 = pcall(function()
+            writefile(fileName, content)
+            addLog("✅ Log saved to: " .. fileName, "SUCCESS")
+        else
+            -- Alternative: Copy to clipboard if available
+            if setclipboard then
                 setclipboard(content)
-            end)
-            if success3 then
-                saveMethod = "clipboard"
-                addLog("📋 Copied to clipboard! Paste in notes app", "SUCCESS")
+                addLog("📋 Log copied to clipboard (writefile not available)", "INFO")
             else
-                addLog("❌ Clipboard failed: " .. tostring(err3), "DEBUG")
+                addLog("❌ No file writing method available", "ERROR")
             end
         end
-        
-        -- Method 3: Manual display as last resort
-        if saveMethod == "none" then
-            addLog("📄 MANUAL COPY:", "MANUAL")
-            addLog("═══════════════════════════════", "MANUAL")
-            local lines = {}
-            for line in content:gmatch("[^\n]+") do
-                table.insert(lines, line)
-            end
-            
-            for i = 1, math.min(10, #lines) do
-                addLog(lines[i], "EXPORT")
-            end
-            
-            if #lines > 10 then
-                addLog("... (" .. (#lines - 10) .. " more lines)", "EXPORT")
-            end
-            addLog("═══════════════════════════════", "MANUAL")
-            saveMethod = "manual"
-        end
-        
-        addLog("💾 Save completed using: " .. saveMethod, "SYSTEM")
-        
     end)
     
     if not success then
         addLog("❌ Save failed: " .. tostring(err), "ERROR")
-        print("SAVE ERROR DETAILS:", err)
-    end
-end
-        
-        local saveMethod = "none"
-        
-        -- Function untuk clear logs
-        
-        for _, path in ipairs(mobilePaths) do
-            if writefile then
-                local mobileSuccess, mobileErr = pcall(function()
-                    writefile(path, content)
-                end)
-                if mobileSuccess then
-                    saveMethod = "mobile_file"
-                    addLog("✅ Log saved to: " .. path, "SUCCESS")
-                    addLog("📱 Check your Downloads folder or executor workspace", "INFO")
-                    break
-                end
-            end
-        end
-        
-        -- Method 2: Create folder then save (for executors that need it)
-        if saveMethod == "none" and makefolderifnotexist and writefile then
-            local folderSuccess, folderErr = pcall(function()
-                makefolderifnotexist("ReelLogs")
-                writefile("ReelLogs/" .. fileName, content)
-            end)
-            if folderSuccess then
-                saveMethod = "folder_file"
-                addLog("✅ Log saved to ReelLogs/" .. fileName, "SUCCESS")
-            end
-        end
-        
-        -- Method 3: Try basic writefile
-        if saveMethod == "none" and writefile then
-            local basicSuccess, basicErr = pcall(function()
-                writefile(fileName, content)
-            end)
-            if basicSuccess then
-                saveMethod = "basic_file"
-                addLog("✅ Log saved as: " .. fileName, "SUCCESS")
-            end
-        end
-        
-        -- Method 4: Clipboard fallback
-        if saveMethod == "none" and setclipboard then
-            local clipSuccess, clipErr = pcall(function()
-                setclipboard(content)
-            end)
-            if clipSuccess then
-                saveMethod = "clipboard"
-                addLog("📋 Log copied to clipboard! Paste into notes app", "SUCCESS")
-                addLog("💡 Open any text app and paste (Ctrl+V or long press)", "INFO")
-            end
-        end
-        
-        -- Method 5: Game chat export
-        if saveMethod == "none" then
-            addLog("� Attempting chat export...", "INFO")
-            local chatSuccess, chatErr = pcall(function()
-                -- Split into smaller chunks for chat
-                local lines = {}
-                for line in content:gmatch("[^\n]+") do
-                    table.insert(lines, line)
-                end
-                
-                -- Send header
-                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer("=== REEL DEBUG LOG START ===", "All")
-                wait(0.2)
-                
-                -- Send chunks of 3 lines each (to avoid chat limits)
-                for i = 1, math.min(30, #lines), 3 do -- Limit to first 30 lines
-                    local chunk = ""
-                    for j = i, math.min(i + 2, #lines) do
-                        if lines[j] and lines[j]:len() > 0 then
-                            chunk = chunk .. lines[j] .. " | "
-                        end
-                    end
-                    if chunk:len() > 0 then
-                        game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(chunk, "All")
-                        wait(0.3)
-                    end
-                end
-                
-                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer("=== LOG END (Check chat history) ===", "All")
-                saveMethod = "chat"
-                addLog("✅ Log exported to game chat", "SUCCESS")
-            end)
-            
-            if not chatSuccess then
-                -- Final fallback - display in UI
-                addLog("📄 MANUAL COPY (Select text below):", "MANUAL")
-                addLog("─────────────────────────────", "MANUAL")
-                local displayLines = {}
-                for line in content:gmatch("[^\n]+") do
-                    table.insert(displayLines, line)
-                end
-                
-                for i = 1, math.min(15, #displayLines) do
-                    addLog(displayLines[i], "EXPORT")
-                end
-                
-                if #displayLines > 15 then
-                    addLog("... +" .. (#displayLines - 15) .. " more lines", "EXPORT")
-                end
-                addLog("─────────────────────────────", "MANUAL")
-                addLog("💡 Scroll up to see full log, then copy manually", "INFO")
-                saveMethod = "manual"
-            end
-        end
-        
-        -- Show executor capabilities
-        if saveMethod ~= "mobile_file" and saveMethod ~= "folder_file" and saveMethod ~= "basic_file" then
-            addLog("⚠️ File saving not working - checking capabilities:", "WARNING")
-            addLog("writefile available: " .. tostring(writefile ~= nil), "INFO")
-            addLog("makefolderifnotexist available: " .. tostring(makefolderifnotexist ~= nil), "INFO")
-            addLog("setclipboard available: " .. tostring(setclipboard ~= nil), "INFO")
-        end
-        
-    end)
-    
-    if not success then
-        addLog("❌ Save operation failed: " .. tostring(err), "ERROR")
-        addLog("💡 Try _G.ReelDebugger.forceExport() for alternative save", "INFO")
     end
 end
 
@@ -703,19 +448,11 @@ end
 
 -- Initialize monitoring systems
 addLog("🚀 Reel Debugger initialized", "SYSTEM")
+addLog("Creating debug UI...", "SYSTEM")
 
-local statusLabel, logText
-if CoreGui then
-    addLog("Creating debug UI...", "SYSTEM")
-    statusLabel, logText = createDebugUI()
-    if statusLabel and logText then
-        addLog("✅ Debug UI created", "SYSTEM")
-    else
-        addLog("⚠️ Debug UI creation failed", "WARNING")
-    end
-else
-    addLog("⚠️ UI disabled - CoreGui not available", "WARNING")
-end
+local statusLabel, logText = createDebugUI()
+
+addLog("✅ Debug UI created", "SYSTEM")
 addLog("Setting up monitoring systems...", "SYSTEM")
 
 monitorChildChanges(playerGui, "PlayerGui")
@@ -757,118 +494,6 @@ _G.ReelDebugger = {
     
     test = function()
         testReelEvents()
-    end,
-    
-    exportToChat = function()
-        addLog("📤 Exporting log to chat...", "EXPORT")
-        local content = table.concat(logData, "\n")
-        local lines = {}
-        for line in content:gmatch("[^\n]+") do
-            table.insert(lines, line)
-        end
-        
-        -- Send in chunks of 5 lines each
-        for i = 1, #lines, 5 do
-            local chunk = ""
-            for j = i, math.min(i + 4, #lines) do
-                chunk = chunk .. lines[j] .. "\n"
-            end
-            game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(chunk, "All")
-            wait(0.1) -- Small delay to avoid spam
-        end
-        addLog("✅ Log exported to chat", "SUCCESS")
-    end,
-    
-    forceExport = function()
-        addLog("🔧 Force Export - Trying all methods...", "EXPORT")
-        
-        local content = "=== REEL DEBUGGER LOG ===\n"
-        content = content .. "Generated: " .. getSafeDate() .. "\n"
-        content = content .. "Player: " .. (player and player.Name or "Unknown") .. "\n"
-        content = content .. "Total Entries: " .. #logData .. "\n\n"
-        content = content .. table.concat(logData, "\n")
-        
-        -- Try all possible file paths for mobile
-        local paths = {
-            "ReelDebugLog.txt",
-            "workspace/ReelDebugLog.txt", 
-            "/sdcard/ReelDebugLog.txt",
-            "/sdcard/Download/ReelDebugLog.txt",
-            "/storage/emulated/0/ReelDebugLog.txt",
-            "/storage/emulated/0/Download/ReelDebugLog.txt",
-            "Documents/ReelDebugLog.txt",
-            "/var/mobile/Documents/ReelDebugLog.txt"
-        }
-        
-        for i, path in ipairs(paths) do
-            if writefile then
-                local success = pcall(function()
-                    writefile(path, content)
-                end)
-                if success then
-                    addLog("✅ SUCCESS: Saved to " .. path, "SUCCESS")
-                    return
-                else
-                    addLog("❌ Failed: " .. path, "ERROR")
-                end
-            end
-        end
-        
-        -- If all fails, try clipboard
-        if setclipboard then
-            setclipboard(content)
-            addLog("📋 Copied to clipboard as backup", "SUCCESS")
-        end
-        
-        addLog("⚠️ All file methods failed - use clipboard", "WARNING")
-    end,
-    
-    getExecutorInfo = function()
-        addLog("🔍 Executor Compatibility Check:", "INFO")
-        addLog("writefile: " .. tostring(writefile ~= nil), "INFO")
-        addLog("setclipboard: " .. tostring(setclipboard ~= nil), "INFO")
-        addLog("makefolderifnotexist: " .. tostring(makefolderifnotexist ~= nil), "INFO")
-        addLog("readfile: " .. tostring(readfile ~= nil), "INFO")
-        addLog("isfolder: " .. tostring(isfolder ~= nil), "INFO")
-        addLog("isfile: " .. tostring(isfile ~= nil), "INFO")
-        
-        -- Test actual file writing
-        if writefile then
-            addLog("🧪 Testing file write capability...", "TEST")
-            local testSuccess = pcall(function()
-                writefile("test_write.txt", "test")
-                if isfile and isfile("test_write.txt") then
-                    addLog("✅ File writing works!", "SUCCESS")
-                    if delfile then delfile("test_write.txt") end
-                else
-                    addLog("⚠️ File created but not accessible", "WARNING")
-                end
-            end)
-            if not testSuccess then
-                addLog("❌ File writing failed", "ERROR")
-            end
-        end
-        
-        -- Detect executor type
-        local executorName = "Unknown"
-        if syn and syn.request then
-            executorName = "Synapse X"
-        elseif KRNL_LOADED then
-            executorName = "Krnl"
-        elseif getgenv and getgenv().FLUXUS_LOADED then
-            executorName = "Fluxus"
-        elseif getgenv and getgenv().COMET_LOADED then
-            executorName = "Comet"
-        elseif Delta and Delta.request then
-            executorName = "Delta"
-        elseif getgenv and getgenv().ARCEUS_LOADED then
-            executorName = "Arceus X"
-        elseif _G.ScriptWare then
-            executorName = "Script-Ware"
-        end
-        
-        addLog("Detected Executor: " .. executorName, "INFO")
-        return executorName
     end
 }
 
@@ -878,9 +503,3 @@ addLog("_G.ReelDebugger.saveLog() - Save current log", "SYSTEM")
 addLog("_G.ReelDebugger.clearLog() - Clear current log", "SYSTEM")
 addLog("_G.ReelDebugger.analyze() - Analyze current reel", "SYSTEM")
 addLog("_G.ReelDebugger.test() - Test reel events", "SYSTEM")
-addLog("_G.ReelDebugger.exportToChat() - Export log to game chat", "SYSTEM")
-addLog("_G.ReelDebugger.forceExport() - Force save with all paths", "SYSTEM")
-addLog("_G.ReelDebugger.getExecutorInfo() - Check executor compatibility", "SYSTEM")
-
--- Check executor compatibility on startup
-_G.ReelDebugger.getExecutorInfo()
