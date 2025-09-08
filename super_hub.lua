@@ -242,147 +242,237 @@ local function setupAutoReel()
                     end
                     
                 elseif Config.AutoReel.mode == "Perfect" then
-                    -- Perfect mode - follow progress bar perfectly
+                    -- Perfect mode - follow white bar perfectly within safe zone
                     local foundBar = false
                     local connection
                     
-                    -- Try multiple possible bar locations
-                    local function findProgressBar()
-                        -- Common locations for progress bars
-                        local possiblePaths = {
+                    -- Enhanced bar detection for Perfect mode
+                    local function findReelBars()
+                        local possibleContainers = {
                             GUI:FindFirstChild("bar"),
                             GUI:FindFirstChild("Bar"),
-                            GUI:FindFirstChild("progressbar"),
-                            GUI:FindFirstChild("ProgressBar"),
                             GUI:FindFirstChild("safezone"),
+                            GUI:FindFirstChild("reelbar"),
+                            GUI:FindFirstChild("minigame")
                         }
                         
-                        for _, parent in pairs(possiblePaths) do
-                            if parent then
-                                local playerbar = parent:FindFirstChild("playerbar") or 
-                                                parent:FindFirstChild("bar") or
-                                                parent:FindFirstChild("progress") or
-                                                parent:FindFirstChild("fill")
-                                if playerbar then
-                                    return playerbar
+                        for _, container in pairs(possibleContainers) do
+                            if container then
+                                local whiteBar = container:FindFirstChild("playerbar") or 
+                                               container:FindFirstChild("whitebar") or
+                                               container:FindFirstChild("progress") or
+                                               container:FindFirstChild("fill")
+                                               
+                                local safeZone = container:FindFirstChild("safezone") or
+                                               container:FindFirstChild("safe") or
+                                               container:FindFirstChild("target") or
+                                               container:FindFirstChild("zone")
+                                
+                                if whiteBar then
+                                    return whiteBar, safeZone, container
                                 end
                             end
                         end
-                        return nil
+                        return nil, nil, nil
                     end
                     
-                    local playerBar = findProgressBar()
+                    local whiteBar, safeZone, container = findReelBars()
                     
-                    if playerBar then
+                    if whiteBar then
                         foundBar = true
+                        print("Perfect mode - Found white bar:", whiteBar.Name)
+                        
                         connection = RunService.Heartbeat:Connect(function()
                             if GUI.Parent == nil then
                                 connection:Disconnect()
                                 return
                             end
                             
-                            -- Check different possible progress indicators
-                            local progress = 0
-                            if playerBar.Size and playerBar.Size.X.Scale then
-                                progress = playerBar.Size.X.Scale
-                            elseif playerBar:FindFirstChild("Size") then
-                                progress = playerBar.Size.X.Scale or 0
+                            -- Get white bar metrics
+                            local whiteBarProgress = 0
+                            local whiteBarPosition = 0
+                            
+                            if whiteBar.Size and whiteBar.Size.X.Scale then
+                                whiteBarProgress = whiteBar.Size.X.Scale
                             end
                             
-                            if progress > 0.95 then -- Near completion
+                            if whiteBar.Position and whiteBar.Position.X.Scale then
+                                whiteBarPosition = whiteBar.Position.X.Scale
+                            end
+                            
+                            -- Perfect mode - complete when white bar is optimally positioned
+                            local shouldComplete = false
+                            
+                            if safeZone then
+                                -- Check perfect positioning within safe zone
+                                local safeZonePos = safeZone.Position.X.Scale or 0
+                                local safeZoneSize = safeZone.Size.X.Scale or 0
+                                local safeZoneCenter = safeZonePos + (safeZoneSize / 2)
+                                
+                                -- Complete when white bar is near center of safe zone
+                                local distanceFromCenter = math.abs(whiteBarPosition - safeZoneCenter)
+                                shouldComplete = distanceFromCenter < (safeZoneSize * 0.2) and whiteBarProgress > 0.9
+                            else
+                                -- No safe zone - complete at high progress
+                                shouldComplete = whiteBarProgress > 0.95
+                            end
+                            
+                            if shouldComplete then
                                 if ReplicatedStorage:WaitForChild("events"):WaitForChild("reelfinished") ~= nil then
                                     ReplicatedStorage.events.reelfinished:FireServer(100, false)
                                     connection:Disconnect()
+                                    print("Perfect reel completed at progress:", whiteBarProgress)
                                 end
                             end
                         end)
                     end
                     
-                    -- Fallback if no progress bar found
+                    -- Fallback for Perfect mode
                     if not foundBar then
                         task.wait(currentDelay)
                         if ReplicatedStorage:WaitForChild("events"):WaitForChild("reelfinished") ~= nil then
                             ReplicatedStorage.events.reelfinished:FireServer(100, false)
+                            print("Perfect mode fallback completed")
                         end
                     end
                     
                 elseif Config.AutoReel.mode == "Normal" then
-                    -- Normal mode - wait and complete realistically
+                    -- Normal mode - follow the white bar and keep within bounds
                     local foundBar = false
                     local connection
                     local hasStartedReeling = false
                     local startTime = tick()
                     
-                    local function findProgressBar()
-                        local possiblePaths = {
+                    local function findReelBars()
+                        -- Look for reel minigame components
+                        local possibleContainers = {
                             GUI:FindFirstChild("bar"),
                             GUI:FindFirstChild("Bar"),
-                            GUI:FindFirstChild("progressbar"),
-                            GUI:FindFirstChild("ProgressBar"),
                             GUI:FindFirstChild("safezone"),
+                            GUI:FindFirstChild("reelbar"),
+                            GUI:FindFirstChild("minigame")
                         }
                         
-                        for _, parent in pairs(possiblePaths) do
-                            if parent then
-                                local playerbar = parent:FindFirstChild("playerbar") or 
-                                                parent:FindFirstChild("bar") or
-                                                parent:FindFirstChild("progress") or
-                                                parent:FindFirstChild("fill")
-                                if playerbar then
-                                    return playerbar
+                        for _, container in pairs(possibleContainers) do
+                            if container then
+                                -- Look for the white progress bar and safe zone
+                                local whiteBar = container:FindFirstChild("playerbar") or 
+                                               container:FindFirstChild("whitebar") or
+                                               container:FindFirstChild("progress") or
+                                               container:FindFirstChild("fill")
+                                               
+                                local safeZone = container:FindFirstChild("safezone") or
+                                               container:FindFirstChild("safe") or
+                                               container:FindFirstChild("target") or
+                                               container:FindFirstChild("zone")
+                                
+                                if whiteBar then
+                                    return whiteBar, safeZone, container
                                 end
                             end
                         end
-                        return nil
+                        return nil, nil, nil
                     end
                     
-                    local playerBar = findProgressBar()
+                    local whiteBar, safeZone, container = findReelBars()
                     
-                    if playerBar then
+                    if whiteBar then
                         foundBar = true
-                        print("Found progress bar:", playerBar.Name)
+                        print("Found white bar:", whiteBar.Name, "in container:", container.Name)
+                        
                         connection = RunService.Heartbeat:Connect(function()
                             if GUI.Parent == nil then
                                 connection:Disconnect()
                                 return
                             end
                             
-                            local progress = 0
-                            if playerBar.Size and playerBar.Size.X.Scale then
-                                progress = playerBar.Size.X.Scale
+                            -- Get white bar position and size
+                            local whiteBarProgress = 0
+                            local whiteBarPosition = 0
+                            
+                            if whiteBar.Size and whiteBar.Size.X.Scale then
+                                whiteBarProgress = whiteBar.Size.X.Scale
                             end
                             
-                            -- Debug progress
+                            if whiteBar.Position and whiteBar.Position.X.Scale then
+                                whiteBarPosition = whiteBar.Position.X.Scale
+                            end
+                            
+                            -- Debug white bar info
                             if Config.General.debugMode then
-                                print("Progress:", progress)
+                                print("White Bar - Progress:", whiteBarProgress, "Position:", whiteBarPosition)
                             end
                             
-                            -- Start reeling when progress begins or after a delay
-                            if (progress > 0.1 or tick() - startTime > 1) and not hasStartedReeling then
+                            -- Check if we need to reel (when white bar is in safe zone or moving)
+                            local shouldReel = false
+                            
+                            if safeZone then
+                                -- Check if white bar overlaps with safe zone
+                                local safeZonePos = safeZone.Position.X.Scale or 0
+                                local safeZoneSize = safeZone.Size.X.Scale or 0
+                                local safeZoneEnd = safeZonePos + safeZoneSize
+                                
+                                -- White bar is in safe zone
+                                if whiteBarPosition >= safeZonePos and whiteBarPosition <= safeZoneEnd then
+                                    shouldReel = true
+                                end
+                                
+                                if Config.General.debugMode then
+                                    print("Safe Zone - Pos:", safeZonePos, "Size:", safeZoneSize, "Should Reel:", shouldReel)
+                                end
+                            else
+                                -- No safe zone found, reel based on progress
+                                shouldReel = whiteBarProgress > 0.3 and whiteBarProgress < 0.9
+                            end
+                            
+                            -- Start reeling when conditions are met
+                            if shouldReel and not hasStartedReeling then
                                 hasStartedReeling = true
                                 task.wait(currentDelay)
+                                print("Started reeling - white bar in position")
                             end
                             
-                            -- Complete when progress is substantial but not perfect
-                            if hasStartedReeling and (progress > 0.6 or tick() - startTime > 3) then
-                                local randomCompletion = 0.7 + math.random() * 0.25 -- 70-95%
-                                if progress >= randomCompletion or tick() - startTime > 4 then
+                            -- Complete when white bar reaches good position or timeout
+                            if hasStartedReeling then
+                                local completionCondition = false
+                                
+                                if safeZone then
+                                    -- Complete when white bar has been in safe zone for a while
+                                    completionCondition = shouldReel and whiteBarProgress > 0.6
+                                else
+                                    -- Complete based on progress only
+                                    completionCondition = whiteBarProgress > 0.7
+                                end
+                                
+                                -- Add randomness for human-like behavior
+                                local randomFactor = math.random(70, 95) / 100 -- 70-95%
+                                
+                                if completionCondition and whiteBarProgress >= randomFactor then
                                     if ReplicatedStorage:WaitForChild("events"):WaitForChild("reelfinished") ~= nil then
                                         ReplicatedStorage.events.reelfinished:FireServer(100, false)
                                         connection:Disconnect()
-                                        print("Reel completed at progress:", progress)
+                                        print("Reel completed - white bar at:", whiteBarProgress)
                                     end
+                                end
+                            end
+                            
+                            -- Timeout protection
+                            if tick() - startTime > 10 then
+                                if ReplicatedStorage:WaitForChild("events"):WaitForChild("reelfinished") ~= nil then
+                                    ReplicatedStorage.events.reelfinished:FireServer(100, false)
+                                    connection:Disconnect()
+                                    print("Reel completed - timeout protection")
                                 end
                             end
                         end)
                     else
-                        print("No progress bar found, using fallback method")
+                        print("No white bar found for reel minigame")
                     end
                     
-                    -- Improved fallback method with timing
+                    -- Enhanced fallback method with better timing
                     if not foundBar then
                         spawn(function()
-                            local waitTime = currentDelay + math.random() * 2 -- 2-5 seconds random
+                            local waitTime = currentDelay + math.random(2, 4) -- 2-6 seconds random
                             task.wait(waitTime)
                             if GUI.Parent ~= nil and ReplicatedStorage:WaitForChild("events"):WaitForChild("reelfinished") ~= nil then
                                 ReplicatedStorage.events.reelfinished:FireServer(100, false)
