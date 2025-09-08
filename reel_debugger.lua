@@ -5,269 +5,501 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
-print("🔍 REEL DEBUGGER STARTED - Enter reel minigame to see debug info")
-print("=" .. string.rep("=", 50))
+-- Logging system
+local logData = {}
+local maxLogEntries = 1000
+local debugUI = nil
 
--- Variables untuk tracking
-local isReelActive = false
-local reelUI = nil
-local debugConnection = nil
-local eventConnections = {}
-
--- Function untuk monitor semua RemoteEvents
-local function setupRemoteEventMonitoring()
-    print("📡 Setting up RemoteEvent monitoring...")
+-- Function untuk add log entry
+local function addLog(message, category)
+    category = category or "INFO"
+    local timestamp = os.date("%H:%M:%S")
+    local logEntry = "[" .. timestamp .. "] [" .. category .. "] " .. message
     
-    -- Monitor ReplicatedStorage.events
+    table.insert(logData, logEntry)
+    print(logEntry)
+    
+    -- Keep only recent entries
+    if #logData > maxLogEntries then
+        table.remove(logData, 1)
+    end
+    
+    -- Update UI if exists
+    if debugUI and debugUI.Parent then
+        updateLogDisplay()
+    end
+end
+
+-- Function untuk create debug UI
+local function createDebugUI()
+    if debugUI and debugUI.Parent then
+        debugUI:Destroy()
+    end
+    
+    -- Main frame
+    debugUI = Instance.new("ScreenGui")
+    debugUI.Name = "ReelDebuggerUI"
+    debugUI.ResetOnSpawn = false
+    debugUI.Parent = CoreGui
+    
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "MainFrame"
+    mainFrame.Size = UDim2.new(0, 500, 0, 400)
+    mainFrame.Position = UDim2.new(0.5, -250, 0.5, -200)
+    mainFrame.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
+    mainFrame.BorderSizePixel = 2
+    mainFrame.BorderColor3 = Color3.new(0.3, 0.3, 0.3)
+    mainFrame.Active = true
+    mainFrame.Draggable = true
+    mainFrame.Parent = debugUI
+    
+    -- Title bar
+    local titleBar = Instance.new("Frame")
+    titleBar.Name = "TitleBar"
+    titleBar.Size = UDim2.new(1, 0, 0, 30)
+    titleBar.Position = UDim2.new(0, 0, 0, 0)
+    titleBar.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+    titleBar.BorderSizePixel = 0
+    titleBar.Parent = mainFrame
+    
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Name = "TitleLabel"
+    titleLabel.Size = UDim2.new(1, -60, 1, 0)
+    titleLabel.Position = UDim2.new(0, 5, 0, 0)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = "🔍 Reel Debugger"
+    titleLabel.TextColor3 = Color3.new(1, 1, 1)
+    titleLabel.TextScaled = true
+    titleLabel.Font = Enum.Font.SourceSansBold
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.Parent = titleBar
+    
+    -- Close button
+    local closeButton = Instance.new("TextButton")
+    closeButton.Name = "CloseButton"
+    closeButton.Size = UDim2.new(0, 25, 0, 25)
+    closeButton.Position = UDim2.new(1, -30, 0, 2.5)
+    closeButton.BackgroundColor3 = Color3.new(0.8, 0.2, 0.2)
+    closeButton.Text = "X"
+    closeButton.TextColor3 = Color3.new(1, 1, 1)
+    closeButton.TextScaled = true
+    closeButton.Font = Enum.Font.SourceSansBold
+    closeButton.BorderSizePixel = 0
+    closeButton.Parent = titleBar
+    
+    closeButton.MouseButton1Click:Connect(function()
+        debugUI.Enabled = false
+    end)
+    
+    -- Status label
+    local statusLabel = Instance.new("TextLabel")
+    statusLabel.Name = "StatusLabel"
+    statusLabel.Size = UDim2.new(1, -10, 0, 25)
+    statusLabel.Position = UDim2.new(0, 5, 0, 35)
+    statusLabel.BackgroundTransparency = 1
+    statusLabel.Text = "Status: Monitoring..."
+    statusLabel.TextColor3 = Color3.new(0.8, 1, 0.8)
+    statusLabel.TextScaled = true
+    statusLabel.Font = Enum.Font.SourceSans
+    statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+    statusLabel.Parent = mainFrame
+    
+    -- Log display
+    local logFrame = Instance.new("ScrollingFrame")
+    logFrame.Name = "LogFrame"
+    logFrame.Size = UDim2.new(1, -10, 1, -110)
+    logFrame.Position = UDim2.new(0, 5, 0, 65)
+    logFrame.BackgroundColor3 = Color3.new(0.05, 0.05, 0.05)
+    logFrame.BorderColor3 = Color3.new(0.3, 0.3, 0.3)
+    logFrame.ScrollBarThickness = 8
+    logFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+    logFrame.Parent = mainFrame
+    
+    local logText = Instance.new("TextLabel")
+    logText.Name = "LogText"
+    logText.Size = UDim2.new(1, -10, 1, 0)
+    logText.Position = UDim2.new(0, 5, 0, 0)
+    logText.BackgroundTransparency = 1
+    logText.Text = "Logs will appear here..."
+    logText.TextColor3 = Color3.new(1, 1, 1)
+    logText.TextSize = 12
+    logText.Font = Enum.Font.Code
+    logText.TextXAlignment = Enum.TextXAlignment.Left
+    logText.TextYAlignment = Enum.TextYAlignment.Top
+    logText.TextWrapped = true
+    logText.Parent = logFrame
+    
+    -- Button frame
+    local buttonFrame = Instance.new("Frame")
+    buttonFrame.Name = "ButtonFrame"
+    buttonFrame.Size = UDim2.new(1, -10, 0, 35)
+    buttonFrame.Position = UDim2.new(0, 5, 1, -40)
+    buttonFrame.BackgroundTransparency = 1
+    buttonFrame.Parent = mainFrame
+    
+    -- Save button
+    local saveButton = Instance.new("TextButton")
+    saveButton.Name = "SaveButton"
+    saveButton.Size = UDim2.new(0, 100, 1, 0)
+    saveButton.Position = UDim2.new(0, 0, 0, 0)
+    saveButton.BackgroundColor3 = Color3.new(0.2, 0.6, 0.2)
+    saveButton.Text = "💾 Save Log"
+    saveButton.TextColor3 = Color3.new(1, 1, 1)
+    saveButton.TextScaled = true
+    saveButton.Font = Enum.Font.SourceSansBold
+    saveButton.BorderSizePixel = 0
+    saveButton.Parent = buttonFrame
+    
+    -- Clear button
+    local clearButton = Instance.new("TextButton")
+    clearButton.Name = "ClearButton"
+    clearButton.Size = UDim2.new(0, 100, 1, 0)
+    clearButton.Position = UDim2.new(0, 110, 0, 0)
+    clearButton.BackgroundColor3 = Color3.new(0.6, 0.4, 0.2)
+    clearButton.Text = "🗑️ Clear"
+    clearButton.TextColor3 = Color3.new(1, 1, 1)
+    clearButton.TextScaled = true
+    clearButton.Font = Enum.Font.SourceSansBold
+    clearButton.BorderSizePixel = 0
+    clearButton.Parent = buttonFrame
+    
+    -- Analyze button
+    local analyzeButton = Instance.new("TextButton")
+    analyzeButton.Name = "AnalyzeButton"
+    analyzeButton.Size = UDim2.new(0, 100, 1, 0)
+    analyzeButton.Position = UDim2.new(0, 220, 0, 0)
+    analyzeButton.BackgroundColor3 = Color3.new(0.2, 0.4, 0.8)
+    analyzeButton.Text = "🔍 Analyze"
+    analyzeButton.TextColor3 = Color3.new(1, 1, 1)
+    analyzeButton.TextScaled = true
+    analyzeButton.Font = Enum.Font.SourceSansBold
+    analyzeButton.BorderSizePixel = 0
+    analyzeButton.Parent = buttonFrame
+    
+    -- Test button
+    local testButton = Instance.new("TextButton")
+    testButton.Name = "TestButton"
+    testButton.Size = UDim2.new(0, 100, 1, 0)
+    testButton.Position = UDim2.new(0, 330, 0, 0)
+    testButton.BackgroundColor3 = Color3.new(0.6, 0.2, 0.6)
+    testButton.Text = "🧪 Test"
+    testButton.TextColor3 = Color3.new(1, 1, 1)
+    testButton.TextScaled = true
+    testButton.Font = Enum.Font.SourceSansBold
+    testButton.BorderSizePixel = 0
+    testButton.Parent = buttonFrame
+    
+    -- Button connections
+    saveButton.MouseButton1Click:Connect(function()
+        saveLogToFile()
+    end)
+    
+    clearButton.MouseButton1Click:Connect(function()
+        clearLogs()
+    end)
+    
+    analyzeButton.MouseButton1Click:Connect(function()
+        analyzeCurrentReel()
+    end)
+    
+    testButton.MouseButton1Click:Connect(function()
+        testReelEvents()
+    end)
+    
+    return mainFrame.StatusLabel, logFrame.LogText
+end
+
+-- Function untuk update log display
+function updateLogDisplay()
+    if not debugUI or not debugUI.Parent then return end
+    
+    local logText = debugUI.MainFrame.LogFrame.LogText
+    local statusLabel = debugUI.MainFrame.StatusLabel
+    
+    -- Update log text
+    local displayText = table.concat(logData, "\n")
+    logText.Text = displayText
+    
+    -- Auto scroll to bottom
+    local logFrame = debugUI.MainFrame.LogFrame
+    logFrame.CanvasPosition = Vector2.new(0, math.max(0, logText.TextBounds.Y - logFrame.AbsoluteSize.Y))
+    
+    -- Update status
+    local reelActive = playerGui:FindFirstChild("reel") ~= nil
+    statusLabel.Text = "Status: " .. (reelActive and "🎣 REEL ACTIVE" or "⏳ Monitoring...")
+    statusLabel.TextColor3 = reelActive and Color3.new(1, 0.8, 0.2) or Color3.new(0.8, 1, 0.8)
+end
+
+-- Function untuk save log to file
+local function saveLogToFile()
+    local success, err = pcall(function()
+        local fileName = "ReelDebugLog_" .. os.date("%Y%m%d_%H%M%S") .. ".txt"
+        local content = "=== REEL DEBUGGER LOG ===\n"
+        content = content .. "Generated: " .. os.date("%Y-%m-%d %H:%M:%S") .. "\n"
+        content = content .. "Player: " .. player.Name .. "\n"
+        content = content .. "Total Entries: " .. #logData .. "\n\n"
+        content = content .. table.concat(logData, "\n")
+        
+        -- Use writefile if available (Synapse/Krnl)
+        if writefile then
+            writefile(fileName, content)
+            addLog("✅ Log saved to: " .. fileName, "SUCCESS")
+        else
+            -- Alternative: Copy to clipboard if available
+            if setclipboard then
+                setclipboard(content)
+                addLog("📋 Log copied to clipboard (writefile not available)", "INFO")
+            else
+                addLog("❌ No file writing method available", "ERROR")
+            end
+        end
+    end)
+    
+    if not success then
+        addLog("❌ Save failed: " .. tostring(err), "ERROR")
+    end
+end
+
+-- Function untuk clear logs
+local function clearLogs()
+    logData = {}
+    addLog("🗑️ Logs cleared", "INFO")
+end
+
+-- Function untuk analyze current reel
+local function analyzeCurrentReel()
+    local currentReel = playerGui:FindFirstChild("reel")
+    if currentReel then
+        addLog("🔍 Analyzing current reel UI...", "ANALYZE")
+        analyzeReelUI(currentReel)
+    else
+        addLog("❌ No reel UI found for analysis", "ERROR")
+    end
+end
+
+-- Function untuk test reel events
+local function testReelEvents()
     local events = ReplicatedStorage:FindFirstChild("events")
     if events then
-        for _, child in pairs(events:GetChildren()) do
-            if child:IsA("RemoteEvent") then
-                local connection = child.OnClientEvent:Connect(function(...)
-                    if isReelActive then
-                        local args = {...}
-                        print("🔥 EVENT FIRED:", child.Name, "Args:", table.concat(args, ", "))
-                    end
-                end)
-                table.insert(eventConnections, connection)
-            end
+        addLog("🧪 Testing reel events...", "TEST")
+        
+        -- Test debug_giveprogress
+        local debugProgress = events:FindFirstChild("debug_giveprogress")
+        if debugProgress then
+            addLog("Testing debug_giveprogress...", "TEST")
+            debugProgress:FireServer(100)
         end
+        
+        -- Test reelfinished
+        local reelfinished = events:FindFirstChild("reelfinished")
+        if reelfinished then
+            addLog("Testing reelfinished...", "TEST")
+            reelfinished:FireServer(100, true)
+        end
+    else
+        addLog("❌ No events folder found", "ERROR")
     end
+end
+
+-- Function untuk monitor child added/removed
+local function monitorChildChanges(parent, name)
+    if not parent then return end
     
-    -- Monitor shared fishing events
-    local sharedEvents = ReplicatedStorage:FindFirstChild("shared")
-    if sharedEvents then
-        local fishing = sharedEvents:FindFirstChild("modules")
-        if fishing then
-            fishing = fishing:FindFirstChild("fishing")
-            if fishing then
-                fishing = fishing:FindFirstChild("rodresources")
-                if fishing then
-                    fishing = fishing:FindFirstChild("events")
-                    if fishing then
-                        for _, child in pairs(fishing:GetChildren()) do
-                            if child:IsA("RemoteEvent") then
-                                local connection = child.OnClientEvent:Connect(function(...)
-                                    if isReelActive then
-                                        local args = {...}
-                                        print("🎣 FISHING EVENT:", child.Name, "Args:", table.concat(args, ", "))
-                                    end
-                                end)
-                                table.insert(eventConnections, connection)
-                            end
-                        end
-                    end
-                end
-            end
+    parent.ChildAdded:Connect(function(child)
+        addLog(name .. " gained child: " .. child.Name .. " (" .. child.ClassName .. ")", "CHILD")
+        
+        if child.Name == "reel" then
+            addLog("🎣 REEL MINIGAME DETECTED!", "REEL")
+            analyzeReelUI(child)
+            monitorReelChanges(child)
         end
-    end
+    end)
+    
+    parent.ChildRemoved:Connect(function(child)
+        addLog(name .. " lost child: " .. child.Name .. " (" .. child.ClassName .. ")", "CHILD")
+        
+        if child.Name == "reel" then
+            addLog("🎣 REEL MINIGAME ENDED!", "REEL")
+        end
+    end)
 end
 
 -- Function untuk analyze reel UI structure
-local function analyzeReelUI(reelGui)
-    print("🎮 REEL UI DETECTED!")
-    print("=" .. string.rep("=", 30))
+function analyzeReelUI(reelGui)
+    if not reelGui then return end
     
-    -- Print basic info
-    print("UI Name:", reelGui.Name)
-    print("UI Class:", reelGui.ClassName)
-    print("UI Parent:", reelGui.Parent.Name)
+    addLog("📊 ANALYZING REEL UI STRUCTURE:", "ANALYZE")
     
-    -- Analyze children
-    print("\n📋 UI CHILDREN:")
-    local function printChildren(parent, depth)
-        depth = depth or 0
-        local indent = string.rep("  ", depth)
+    local function analyzeRecursive(obj, indent)
+        local info = string.rep("  ", indent) .. "├─ " .. obj.Name .. " (" .. obj.ClassName .. ")"
         
-        for _, child in pairs(parent:GetChildren()) do
-            local info = indent .. "├─ " .. child.Name .. " (" .. child.ClassName .. ")"
-            
-            -- Add position/size info for GUI elements
-            if child:IsA("GuiObject") then
-                if child.Position then
-                    info = info .. " Pos:" .. tostring(child.Position)
-                end
-                if child.Size then
-                    info = info .. " Size:" .. tostring(child.Size)
-                end
-                if child.Visible ~= nil then
-                    info = info .. " Visible:" .. tostring(child.Visible)
-                end
-            end
-            
-            print(info)
-            
-            -- Recursively print children (limit depth to avoid spam)
-            if depth < 3 then
-                printChildren(child, depth + 1)
+        if obj:IsA("GuiBase2d") then
+            info = info .. " - Visible: " .. tostring(obj.Visible)
+            if obj:IsA("GuiObject") then
+                info = info .. " - Size: " .. tostring(obj.Size)
+                info = info .. " - Position: " .. tostring(obj.Position)
             end
         end
-    end
-    
-    printChildren(reelGui)
-    print("=" .. string.rep("=", 30))
-end
-
--- Function untuk monitor property changes
-local function monitorPropertyChanges(gui)
-    if not gui then return end
-    
-    -- Monitor common properties
-    local properties = {"Position", "Size", "Visible", "BackgroundColor3", "Text"}
-    
-    local function setupPropertyMonitoring(obj, objName)
-        for _, prop in pairs(properties) do
-            local success, _ = pcall(function()
-                if obj[prop] ~= nil then
-                    obj:GetPropertyChangedSignal(prop):Connect(function()
-                        if isReelActive then
-                            print("🔄 PROPERTY CHANGED:", objName, prop, "=", tostring(obj[prop]))
-                        end
-                    end)
-                end
-            end)
-        end
-    end
-    
-    -- Monitor main GUI and children
-    setupPropertyMonitoring(gui, gui.Name)
-    
-    local function setupChildMonitoring(parent, parentName)
-        for _, child in pairs(parent:GetChildren()) do
-            local childName = parentName .. "." .. child.Name
-            setupPropertyMonitoring(child, childName)
-            
-            -- Monitor grandchildren too
-            if child:IsA("GuiObject") then
-                setupChildMonitoring(child, childName)
-            end
-        end
-    end
-    
-    setupChildMonitoring(gui, gui.Name)
-end
-
--- Function untuk detect input events
-local function setupInputMonitoring()
-    local UserInputService = game:GetService("UserInputService")
-    
-    UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if isReelActive then
-            print("⌨️ INPUT BEGIN:", input.KeyCode.Name, "GameProcessed:", gameProcessed)
-        end
-    end)
-    
-    UserInputService.InputEnded:Connect(function(input, gameProcessed)
-        if isReelActive then
-            print("⌨️ INPUT END:", input.KeyCode.Name, "GameProcessed:", gameProcessed)
-        end
-    end)
-end
-
--- Main monitoring loop
-local function startDebugging()
-    debugConnection = RunService.Heartbeat:Connect(function()
-        -- Check for reel UI
-        local currentReelUI = playerGui:FindFirstChild("reel")
         
-        if currentReelUI and not isReelActive then
-            -- Reel started
-            isReelActive = true
-            reelUI = currentReelUI
-            
-            print("\n🎯 REEL MINIGAME STARTED!")
-            analyzeReelUI(reelUI)
-            monitorPropertyChanges(reelUI)
-            
-            -- Monitor for specific elements
-            local bar = reelUI:FindFirstChild("bar")
-            local pointer = reelUI:FindFirstChild("pointer")
-            local playerbar = reelUI:FindFirstChild("playerbar")
-            local safezone = reelUI:FindFirstChild("safezone")
-            
-            if bar then print("✅ Found: bar") end
-            if pointer then print("✅ Found: pointer") end
-            if playerbar then print("✅ Found: playerbar") end
-            if safezone then print("✅ Found: safezone") end
-            
-            -- Monitor DescendantAdded/Removed
-            reelUI.DescendantAdded:Connect(function(descendant)
-                print("➕ DESCENDANT ADDED:", descendant.Name, descendant.ClassName)
-            end)
-            
-            reelUI.DescendantRemoving:Connect(function(descendant)
-                print("➖ DESCENDANT REMOVING:", descendant.Name, descendant.ClassName)
-            end)
-            
-        elseif not currentReelUI and isReelActive then
-            -- Reel ended
-            isReelActive = false
-            reelUI = nil
-            print("\n🏁 REEL MINIGAME ENDED!")
-            print("=" .. string.rep("=", 50))
+        if obj:IsA("TextLabel") or obj:IsA("TextButton") then
+            info = info .. " - Text: '" .. obj.Text .. "'"
         end
-    end)
-end
-
--- Function untuk clean up
-local function cleanup()
-    if debugConnection then
-        debugConnection:Disconnect()
+        
+        if obj:IsA("Frame") or obj:IsA("ImageLabel") then
+            info = info .. " - BG Color: " .. tostring(obj.BackgroundColor3)
+        end
+        
+        addLog(info, "STRUCTURE")
+        
+        for _, child in pairs(obj:GetChildren()) do
+            analyzeRecursive(child, indent + 1)
+        end
     end
     
-    for _, connection in pairs(eventConnections) do
-        connection:Disconnect()
-    end
-    
-    print("🧹 Debugger cleaned up!")
+    analyzeRecursive(reelGui, 0)
 end
 
--- Setup monitoring
-setupRemoteEventMonitoring()
-setupInputMonitoring()
-startDebugging()
+-- Function untuk monitor reel UI changes
+local function monitorReelChanges(reelGui)
+    if not reelGui then return end
+    
+    addLog("👀 Monitoring reel UI changes...", "MONITOR")
+    
+    local function monitorObject(obj, path)
+        -- Monitor property changes
+        obj:GetPropertyChangedSignal("Visible"):Connect(function()
+            addLog(path .. " visibility changed: " .. tostring(obj.Visible), "PROPERTY")
+        end)
+        
+        if obj:IsA("GuiObject") then
+            obj:GetPropertyChangedSignal("Size"):Connect(function()
+                addLog(path .. " size changed: " .. tostring(obj.Size), "PROPERTY")
+            end)
+            
+            obj:GetPropertyChangedSignal("Position"):Connect(function()
+                addLog(path .. " position changed: " .. tostring(obj.Position), "PROPERTY")
+            end)
+        end
+        
+        if obj:IsA("TextLabel") or obj:IsA("TextButton") then
+            obj:GetPropertyChangedSignal("Text"):Connect(function()
+                addLog(path .. " text changed: '" .. obj.Text .. "'", "PROPERTY")
+            end)
+        end
+        
+        if obj:IsA("Frame") or obj:IsA("ImageLabel") then
+            obj:GetPropertyChangedSignal("BackgroundColor3"):Connect(function()
+                addLog(path .. " color changed: " .. tostring(obj.BackgroundColor3), "PROPERTY")
+            end)
+        end
+        
+        -- Monitor children
+        obj.ChildAdded:Connect(function(child)
+            local childPath = path .. "." .. child.Name
+            addLog(path .. " gained child: " .. child.Name, "CHILD")
+            monitorObject(child, childPath)
+        end)
+        
+        obj.ChildRemoved:Connect(function(child)
+            addLog(path .. " lost child: " .. child.Name, "CHILD")
+        end)
+        
+        -- Monitor existing children
+        for _, child in pairs(obj:GetChildren()) do
+            local childPath = path .. "." .. child.Name
+            monitorObject(child, childPath)
+        end
+    end
+    
+    monitorObject(reelGui, "reel")
+end
 
--- Commands untuk manual testing
+-- Function untuk monitor remote events
+local function monitorRemoteEvents()
+    local events = ReplicatedStorage:FindFirstChild("events")
+    if not events then 
+        addLog("❌ No events folder found in ReplicatedStorage", "ERROR")
+        return 
+    end
+    
+    addLog("📡 Monitoring remote events...", "EVENTS")
+    
+    for _, event in pairs(events:GetChildren()) do
+        if event:IsA("RemoteEvent") then
+            event.OnClientEvent:Connect(function(...)
+                local args = {...}
+                local argStr = ""
+                for i, arg in pairs(args) do
+                    if i > 1 then argStr = argStr .. ", " end
+                    argStr = argStr .. tostring(arg)
+                end
+                addLog("📨 " .. event.Name .. "(" .. argStr .. ")", "EVENT")
+            end)
+        end
+    end
+end
+
+-- Initialize monitoring systems
+addLog("🚀 Reel Debugger initialized", "SYSTEM")
+addLog("Creating debug UI...", "SYSTEM")
+
+local statusLabel, logText = createDebugUI()
+
+addLog("✅ Debug UI created", "SYSTEM")
+addLog("Setting up monitoring systems...", "SYSTEM")
+
+monitorChildChanges(playerGui, "PlayerGui")
+monitorRemoteEvents()
+
+-- Check if reel already exists
+local existingReel = playerGui:FindFirstChild("reel")
+if existingReel then
+    addLog("🎣 Found existing reel UI!", "REEL")
+    analyzeReelUI(existingReel)
+    monitorReelChanges(existingReel)
+else
+    addLog("⏳ Waiting for reel minigame...", "SYSTEM")
+end
+
+addLog("✅ All monitoring systems active", "SYSTEM")
+addLog("📱 Use the UI buttons to save logs, clear, analyze, or test", "SYSTEM")
+
+-- Global commands for manual control
 _G.ReelDebugger = {
-    stop = cleanup,
-    analyze = function()
-        local currentReel = playerGui:FindFirstChild("reel")
-        if currentReel then
-            analyzeReelUI(currentReel)
-        else
-            print("❌ No reel UI found!")
+    toggleUI = function()
+        if debugUI and debugUI.Parent then
+            debugUI.Enabled = not debugUI.Enabled
+            addLog("🎛️ UI toggled: " .. tostring(debugUI.Enabled), "SYSTEM")
         end
     end,
     
-    -- Test specific events
-    testEvents = function()
-        local events = ReplicatedStorage:FindFirstChild("events")
-        if events then
-            print("🧪 Testing events...")
-            
-            -- Test debug_giveprogress
-            local debugProgress = events:FindFirstChild("debug_giveprogress")
-            if debugProgress then
-                print("Testing debug_giveprogress...")
-                debugProgress:FireServer(100)
-            end
-            
-            -- Test reelfinished
-            local reelfinished = events:FindFirstChild("reelfinished")
-            if reelfinished then
-                print("Testing reelfinished...")
-                reelfinished:FireServer(100, true)
-            end
-        end
+    saveLog = function()
+        saveLogToFile()
+    end,
+    
+    clearLog = function()
+        clearLogs()
+    end,
+    
+    analyze = function()
+        analyzeCurrentReel()
+    end,
+    
+    test = function()
+        testReelEvents()
     end
 }
 
-print("🎛️ Commands available:")
-print("_G.ReelDebugger.stop() - Stop debugger")
-print("_G.ReelDebugger.analyze() - Analyze current reel UI")
-print("_G.ReelDebugger.testEvents() - Test reel events")
-print("\n👀 Now enter a reel minigame to see debug output!")
+addLog("🎛️ Global commands available:", "SYSTEM")
+addLog("_G.ReelDebugger.toggleUI() - Toggle debug UI", "SYSTEM")
+addLog("_G.ReelDebugger.saveLog() - Save current log", "SYSTEM")
+addLog("_G.ReelDebugger.clearLog() - Clear current log", "SYSTEM")
+addLog("_G.ReelDebugger.analyze() - Analyze current reel", "SYSTEM")
+addLog("_G.ReelDebugger.test() - Test reel events", "SYSTEM")
