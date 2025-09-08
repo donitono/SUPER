@@ -9,10 +9,85 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
--- Variables
+-- Anti-Detection Settings
+local antiDetection = {
+    enabled = true,
+    humanDelay = {min = 0.05, max = 0.15}, -- Random delays
+    reactionTime = {min = 0.1, max = 0.3}, -- Human reaction time
+    accuracy = {min = 85, max = 98}, -- Not always perfect
+    missChance = 2, -- 2% chance to "miss" like human
+}
+
+-- Utility function untuk human-like delays
+local function humanDelay(minTime, maxTime)
+    if not antiDetection.enabled then
+        return wait(0.01)
+    end
+    
+    minTime = minTime or antiDetection.humanDelay.min
+    maxTime = maxTime or antiDetection.humanDelay.max
+    local delay = minTime + (maxTime - minTime) * math.random()
+    wait(delay)
+end
+
+-- Random miss function untuk simulate human error
+local function shouldMiss()
+    if not antiDetection.enabled then
+        return false
+    end
+    return math.random(1, 100) <= antiDetection.missChance
+end
+
+-- Variables  
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
+
+-- Anti-Detection: Secure Event Handling
+local originalFireServer = nil
+local originalSendKeyEvent = nil
+local originalSendMouseEvent = nil
+
+-- Store original methods untuk restore later
+local function storeOriginalMethods()
+    if not originalSendKeyEvent then
+        originalSendKeyEvent = game:GetService("VirtualInputManager").SendKeyEvent
+    end
+    if not originalSendMouseEvent then
+        originalSendMouseEvent = game:GetService("VirtualInputManager").SendMouseButtonEvent
+    end
+end
+
+-- Secure input wrapper dengan anti-detection
+local function secureKeyEvent(keyCode, isPressed)
+    storeOriginalMethods()
+    
+    -- Random human reaction delay
+    humanDelay(antiDetection.reactionTime.min, antiDetection.reactionTime.max)
+    
+    -- Sometimes miss like human
+    if shouldMiss() then
+        return -- Simulate miss/delay
+    end
+    
+    -- Execute with original method
+    originalSendKeyEvent(game:GetService("VirtualInputManager"), isPressed, keyCode, false, game)
+end
+
+local function secureMouseEvent(button, isPressed)
+    storeOriginalMethods()
+    
+    -- Human delay
+    humanDelay()
+    
+    -- Miss chance
+    if shouldMiss() then
+        return
+    end
+    
+    -- Execute
+    originalSendMouseEvent(game:GetService("VirtualInputManager"), 0, 0, button, isPressed, player, 0)
+end
 
 -- Autofarm States
 autofarm.autoCastEnabled = false
@@ -34,13 +109,14 @@ function autofarm.startAutoCast(mode)
         if child:IsA("Tool") and child:FindFirstChild("events") then
             local castEvent = child.events:FindFirstChild("cast")
             if castEvent then
-                task.wait(2) -- Delay sebelum cast
+                -- Anti-detection: Random delay sebelum cast (1-3 seconds)
+                local castDelay = math.random(1000, 3000) / 1000
+                task.wait(castDelay)
                 
                 local success, err = pcall(function()
                     if autofarm.castMode == 1 then
-                        -- Mode 1: Legit - simulate mouse click dan tunggu full power
-                        local VirtualInputManager = game:GetService("VirtualInputManager")
-                        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, player, 0)
+                        -- Mode 1: Legit dengan human-like behavior
+                        secureMouseEvent(0, true) -- Use secure mouse event
                         
                         -- Monitor power bar untuk release saat FULL (seperti kinghub)
                         local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
@@ -52,12 +128,21 @@ function autofarm.startAutoCast(mode)
                                     if powerbar and powerbar:FindFirstChild("bar") then
                                         local barConnection
                                         barConnection = powerbar.bar:GetPropertyChangedSignal("Size"):Connect(function()
-                                            -- Release saat mencapai FULL power (100%) seperti kinghub
-                                            if powerbar.bar.Size == UDim2.new(1, 0, 1, 0) then
-                                                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, player, 0)
+                                            -- Anti-detection: Random accuracy (85-98% instead of always 100%)
+                                            local targetPower = math.random(antiDetection.accuracy.min, antiDetection.accuracy.max) / 100
+                                            
+                                            if powerbar.bar.Size.X.Scale >= targetPower then
+                                                -- Human reaction delay before release
+                                                humanDelay(0.05, 0.15)
+                                                secureMouseEvent(0, false)
                                                 barConnection:Disconnect()
                                                 powerConnection:Disconnect()
                                             end
+                                        end)
+                                    end
+                                end
+                            end)
+                        end
                                         end)
                                     end
                                 end
@@ -225,12 +310,20 @@ function autofarm.startAutoShake(mode)
                     if safezone then
                         local button = safezone:FindFirstChild("button")
                         if button then
+                            -- Anti-detection: Human reaction delay untuk shake
+                            humanDelay(0.1, 0.4) -- Random delay 100-400ms
+                            
+                            -- Sometimes miss shake like human
+                            if shouldMiss() then
+                                return -- Skip this shake
+                            end
+                            
                             -- Set selected object dan send return key
                             game:GetService("GuiService").SelectedObject = button
                             if game:GetService("GuiService").SelectedObject == button then
-                                local VirtualInputManager = game:GetService("VirtualInputManager")
-                                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
-                                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
+                                secureKeyEvent(Enum.KeyCode.Return, true)
+                                humanDelay(0.02, 0.08) -- Key press duration
+                                secureKeyEvent(Enum.KeyCode.Return, false)
                                 print("Shake performed (SanHub method)")
                             end
                         end
@@ -254,17 +347,24 @@ function autofarm.startAutoShake(mode)
             local success, err = pcall(function()
                 -- Detect shake button seperti neoxhub
                 if descendant.Name == "button" and descendant.Parent and descendant.Parent.Name == "safezone" then
-                    task.wait(0.3) -- Delay seperti di neoxhub
+                    -- Anti-detection: Variable delay (200-500ms)
+                    local reactionDelay = math.random(200, 500) / 1000
+                    task.wait(reactionDelay)
+                    
+                    -- Miss chance
+                    if shouldMiss() then
+                        return
+                    end
                     
                     -- Set selected object
                     game:GetService("GuiService").SelectedObject = descendant
                     
-                    -- Send return key
-                    local VirtualInputManager = game:GetService("VirtualInputManager")
-                    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
-                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
+                    -- Send return key dengan secure method
+                    secureKeyEvent(Enum.KeyCode.Return, true)
+                    humanDelay(0.03, 0.1) -- Variable key press duration
+                    secureKeyEvent(Enum.KeyCode.Return, false)
                     
-                    task.wait(0.1) -- Small delay
+                    humanDelay(0.05, 0.15) -- Variable delay before reset
                     game:GetService("GuiService").SelectedObject = nil
                     
                     print("Shake performed (NeoxHub method)")
@@ -377,16 +477,19 @@ function autofarm.startAutoReel(mode)
                                 end
                             end
                             
-                            -- Execute hold/release decision dengan anti-spam
-                            local VirtualInputManager = game:GetService("VirtualInputManager")
-                            
+                            -- Execute hold/release decision dengan anti-detection
                             if shouldHold and not autofarm.currentlyHolding then
-                                -- Start holding - send mouse down
-                                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, player, 0)
-                                autofarm.currentlyHolding = true
+                                -- Human reaction delay before hold
+                                humanDelay(0.02, 0.1)
+                                -- Miss chance untuk simulate human error
+                                if not shouldMiss() then
+                                    secureMouseEvent(0, true)
+                                    autofarm.currentlyHolding = true
+                                end
                             elseif not shouldHold and autofarm.currentlyHolding then
-                                -- Stop holding - send mouse up
-                                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, player, 0)
+                                -- Human delay before release
+                                humanDelay(0.02, 0.08)
+                                secureMouseEvent(0, false)
                                 autofarm.currentlyHolding = false
                             end
                             

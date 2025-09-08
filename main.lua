@@ -244,6 +244,65 @@ end)
 local MiscTab = Window:NewTab("⚙️ Misc")
 local MiscSection = MiscTab:NewSection("Miscellaneous")
 
+-- Anti-Detection Settings
+local AntiDetectionSection = MiscTab:NewSection("🛡️ Anti-Detection")
+
+AntiDetectionSection:NewToggle("Enable Anti-Detection", "Make script behavior more human-like", function(state)
+    if autofarm then
+        -- Access anti-detection settings in autofarm module
+        spawn(function()
+            local success, err = pcall(function()
+                local antiDetectionCode = [[
+                    if antiDetection then
+                        antiDetection.enabled = ]] .. tostring(state) .. [[
+                        print("Anti-Detection: ]] .. (state and "Enabled" or "Disabled") .. [[")
+                    end
+                ]]
+                loadstring(antiDetectionCode)()
+            end)
+            if not success then
+                warn("Anti-Detection toggle error: " .. tostring(err))
+            end
+        end)
+    end
+    print("Anti-Detection: " .. (state and "Enabled" or "Disabled"))
+end)
+
+AntiDetectionSection:NewSlider("Miss Chance %", "Chance to miss like human (0-10%)", 10, 0, function(value)
+    spawn(function()
+        local success, err = pcall(function()
+            local missChanceCode = [[
+                if antiDetection then
+                    antiDetection.missChance = ]] .. value .. [[
+                    print("Miss Chance set to: ]] .. value .. [[%")
+                end
+            ]]
+            loadstring(missChanceCode)()
+        end)
+        if not success then
+            warn("Miss chance setting error: " .. tostring(err))
+        end
+    end)
+end)
+
+AntiDetectionSection:NewSlider("Reaction Time (ms)", "Human reaction time 50-500ms", 500, 50, function(value)
+    local reactionTime = value / 1000
+    spawn(function()
+        local success, err = pcall(function()
+            local reactionCode = [[
+                if antiDetection then
+                    antiDetection.reactionTime.max = ]] .. reactionTime .. [[
+                    print("Max Reaction Time: ]] .. value .. [[ms")
+                end
+            ]]
+            loadstring(reactionCode)()
+        end)
+        if not success then
+            warn("Reaction time setting error: " .. tostring(err))
+        end
+    end)
+end)
+
 -- Game modifications
 MiscSection:NewToggle("Perfect Cast", "Always perfect cast", function(state)
     spawn(function()
