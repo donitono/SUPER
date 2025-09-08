@@ -9,85 +9,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
--- Anti-Detection Settings
-local antiDetection = {
-    enabled = true,
-    humanDelay = {min = 0.05, max = 0.15}, -- Random delays
-    reactionTime = {min = 0.1, max = 0.3}, -- Human reaction time
-    accuracy = {min = 85, max = 98}, -- Not always perfect
-    missChance = 2, -- 2% chance to "miss" like human
-}
-
--- Utility function untuk human-like delays
-local function humanDelay(minTime, maxTime)
-    if not antiDetection.enabled then
-        return wait(0.01)
-    end
-    
-    minTime = minTime or antiDetection.humanDelay.min
-    maxTime = maxTime or antiDetection.humanDelay.max
-    local delay = minTime + (maxTime - minTime) * math.random()
-    wait(delay)
-end
-
--- Random miss function untuk simulate human error
-local function shouldMiss()
-    if not antiDetection.enabled then
-        return false
-    end
-    return math.random(1, 100) <= antiDetection.missChance
-end
-
--- Variables  
+-- Variables
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
-
--- Anti-Detection: Secure Event Handling
-local originalFireServer = nil
-local originalSendKeyEvent = nil
-local originalSendMouseEvent = nil
-
--- Store original methods untuk restore later
-local function storeOriginalMethods()
-    if not originalSendKeyEvent then
-        originalSendKeyEvent = game:GetService("VirtualInputManager").SendKeyEvent
-    end
-    if not originalSendMouseEvent then
-        originalSendMouseEvent = game:GetService("VirtualInputManager").SendMouseButtonEvent
-    end
-end
-
--- Secure input wrapper dengan anti-detection
-local function secureKeyEvent(keyCode, isPressed)
-    storeOriginalMethods()
-    
-    -- Random human reaction delay
-    humanDelay(antiDetection.reactionTime.min, antiDetection.reactionTime.max)
-    
-    -- Sometimes miss like human
-    if shouldMiss() then
-        return -- Simulate miss/delay
-    end
-    
-    -- Execute with original method
-    originalSendKeyEvent(game:GetService("VirtualInputManager"), isPressed, keyCode, false, game)
-end
-
-local function secureMouseEvent(button, isPressed)
-    storeOriginalMethods()
-    
-    -- Human delay
-    humanDelay()
-    
-    -- Miss chance
-    if shouldMiss() then
-        return
-    end
-    
-    -- Execute
-    originalSendMouseEvent(game:GetService("VirtualInputManager"), 0, 0, button, isPressed, player, 0)
-end
 
 -- Autofarm States
 autofarm.autoCastEnabled = false
@@ -109,14 +34,15 @@ function autofarm.startAutoCast(mode)
         if child:IsA("Tool") and child:FindFirstChild("events") then
             local castEvent = child.events:FindFirstChild("cast")
             if castEvent then
-                -- Anti-detection: Random delay sebelum cast (1-3 seconds)
-                local castDelay = math.random(1000, 3000) / 1000
-                task.wait(castDelay)
+                -- Random delay sebelum cast untuk terlihat natural
+                local randomDelay = math.random(150, 350) / 100 -- 1.5 - 3.5 detik
+                task.wait(randomDelay)
                 
                 local success, err = pcall(function()
                     if autofarm.castMode == 1 then
-                        -- Mode 1: Legit dengan human-like behavior
-                        secureMouseEvent(0, true) -- Use secure mouse event
+                        -- Mode 1: Legit - simulate mouse click dan tunggu full power
+                        local VirtualInputManager = game:GetService("VirtualInputManager")
+                        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, player, 0)
                         
                         -- Monitor power bar untuk release saat FULL (seperti kinghub)
                         local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
@@ -128,13 +54,9 @@ function autofarm.startAutoCast(mode)
                                     if powerbar and powerbar:FindFirstChild("bar") then
                                         local barConnection
                                         barConnection = powerbar.bar:GetPropertyChangedSignal("Size"):Connect(function()
-                                            -- Anti-detection: Random accuracy (85-98% instead of always 100%)
-                                            local targetPower = math.random(antiDetection.accuracy.min, antiDetection.accuracy.max) / 100
-                                            
-                                            if powerbar.bar.Size.X.Scale >= targetPower then
-                                                -- Human reaction delay before release
-                                                humanDelay(0.05, 0.15)
-                                                secureMouseEvent(0, false)
+                                            -- Release saat mencapai FULL power (100%) seperti kinghub
+                                            if powerbar.bar.Size == UDim2.new(1, 0, 1, 0) then
+                                                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, player, 0)
                                                 barConnection:Disconnect()
                                                 powerConnection:Disconnect()
                                             end
@@ -182,7 +104,7 @@ function autofarm.startAutoCast(mode)
                 end
             end
         end
-    end -- End of onCharacterChildAdded function
+    end
     
     -- Hook untuk reel finished (auto recast)
     local function onGuiRemoved(gui)
@@ -193,7 +115,9 @@ function autofarm.startAutoCast(mode)
             if tool and tool:FindFirstChild("events") then
                 local castEvent = tool.events:FindFirstChild("cast")
                 if castEvent then
-                    task.wait(2) -- Delay sebelum recast
+                    -- Random delay sebelum recast untuk terlihat natural
+                    local randomRecastDelay = math.random(200, 400) / 100 -- 2 - 4 detik
+                    task.wait(randomRecastDelay)
                     
                     local success, err = pcall(function()
                         if autofarm.castMode == 1 then
@@ -267,7 +191,7 @@ function autofarm.startAutoCast(mode)
     autofarm.castConnection1 = character.ChildAdded:Connect(onCharacterChildAdded)
     autofarm.castConnection2 = player.PlayerGui.ChildRemoved:Connect(onGuiRemoved)
     
-    print("Auto Cast started with mode: " .. autofarm.castMode)
+        print("Auto Reel started (Random delays enabled)")
 end
 
 function autofarm.stopAutoCast()
@@ -292,7 +216,7 @@ function autofarm.startAutoShake(mode)
     autofarm.shakeMode = mode or 1
     
     if autofarm.shakeMode == 1 then
-        -- Mode 1: Method dari sanhub - RenderStepped checking
+        -- Mode 1: Method dari sanhub - RenderStepped checking dengan random delays
         local function handleShakeSanHub()
             if not autofarm.autoShakeEnabled then return end
             
@@ -305,20 +229,16 @@ function autofarm.startAutoShake(mode)
                     if safezone then
                         local button = safezone:FindFirstChild("button")
                         if button then
-                            -- Anti-detection: Human reaction delay untuk shake
-                            humanDelay(0.1, 0.4) -- Random delay 100-400ms
-                            
-                            -- Sometimes miss shake like human
-                            if shouldMiss() then
-                                return -- Skip this shake
-                            end
+                            -- Random delay sebelum shake
+                            local randomDelay = math.random(20, 60) / 1000 -- 0.02 - 0.06 detik
+                            task.wait(randomDelay)
                             
                             -- Set selected object dan send return key
                             game:GetService("GuiService").SelectedObject = button
                             if game:GetService("GuiService").SelectedObject == button then
-                                secureKeyEvent(Enum.KeyCode.Return, true)
-                                humanDelay(0.02, 0.08) -- Key press duration
-                                secureKeyEvent(Enum.KeyCode.Return, false)
+                                local VirtualInputManager = game:GetService("VirtualInputManager")
+                                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
+                                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
                                 print("Shake performed (SanHub method)")
                             end
                         end
@@ -335,31 +255,26 @@ function autofarm.startAutoShake(mode)
         autofarm.shakeConnection = RunService.RenderStepped:Connect(handleShakeSanHub)
         
     elseif autofarm.shakeMode == 2 then
-        -- Mode 2: Method dari neoxhub - DescendantAdded detection
+        -- Mode 2: Method dari neoxhub - DescendantAdded detection dengan random delays
         local function handleShakeNeoxHub(descendant)
             if not autofarm.autoShakeEnabled then return end
             
             local success, err = pcall(function()
                 -- Detect shake button seperti neoxhub
                 if descendant.Name == "button" and descendant.Parent and descendant.Parent.Name == "safezone" then
-                    -- Anti-detection: Variable delay (200-500ms)
-                    local reactionDelay = math.random(200, 500) / 1000
-                    task.wait(reactionDelay)
-                    
-                    -- Miss chance
-                    if shouldMiss() then
-                        return
-                    end
+                    -- Random delay sebelum shake (variasi dari 0.2-0.5 detik)
+                    local randomDelay = math.random(200, 500) / 1000
+                    task.wait(randomDelay)
                     
                     -- Set selected object
                     game:GetService("GuiService").SelectedObject = descendant
                     
-                    -- Send return key dengan secure method
-                    secureKeyEvent(Enum.KeyCode.Return, true)
-                    humanDelay(0.03, 0.1) -- Variable key press duration
-                    secureKeyEvent(Enum.KeyCode.Return, false)
+                    -- Send return key
+                    local VirtualInputManager = game:GetService("VirtualInputManager")
+                    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
+                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
                     
-                    humanDelay(0.05, 0.15) -- Variable delay before reset
+                    task.wait(0.1) -- Small delay
                     game:GetService("GuiService").SelectedObject = nil
                     
                     print("Shake performed (NeoxHub method)")
@@ -375,7 +290,7 @@ function autofarm.startAutoShake(mode)
         autofarm.shakeConnection = player.PlayerGui.DescendantAdded:Connect(handleShakeNeoxHub)
     end
     
-    print("Auto Shake started with mode: " .. autofarm.shakeMode)
+    print("Auto Shake started with mode: " .. autofarm.shakeMode .. " (Random delays enabled)")
 end
 
 function autofarm.stopAutoShake()
@@ -390,140 +305,48 @@ function autofarm.stopAutoShake()
     print("Auto Shake stopped")
 end
 
--- Auto Reel States
-autofarm.autoReelEnabled = false
-autofarm.reelMode = 1 -- 1 = legit (follow fish), 2 = instant (perfect)
-autofarm.currentlyHolding = false -- Track current hold state
-
--- Auto Reel stop function
-function autofarm.stopAutoReel()
-    autofarm.autoReelEnabled = false
-    
-    -- Release any held mouse button
-    if autofarm.currentlyHolding then
-        local VirtualInputManager = game:GetService("VirtualInputManager")
-        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, player, 0)
-        autofarm.currentlyHolding = false
-    end
-    
-    print("Auto Reel stopped")
-end
-
--- Auto Reel dengan 2 mode  
-function autofarm.startAutoReel(mode)
+-- Auto Reel (dari sanhub dengan random delays)
+function autofarm.startAutoReel()
     autofarm.autoReelEnabled = true
-    autofarm.reelMode = mode or 1
     
     spawn(function()
         while autofarm.autoReelEnabled do
             local success, err = pcall(function()
+                -- Method dari sanhub dengan random timing
                 local playerGui = player:WaitForChild("PlayerGui")
                 local reel = playerGui:FindFirstChild("reel")
                 
-                if reel and reel.Visible then
-                    if autofarm.reelMode == 1 then
-                        -- Mode 1: Legit - Hold/Release system untuk control bar putih
-                        local fish = reel:FindFirstChild("fish")
-                        local playerbar = reel:FindFirstChild("playerbar") 
-                        local bar = reel:FindFirstChild("bar") -- Progress bar
+                if reel then
+                    local bar = reel:FindFirstChild("bar")
+                    if bar and bar.Visible then
+                        -- Random delay sebelum reel (0.1-0.3 detik)
+                        local randomDelay = math.random(100, 300) / 1000
+                        task.wait(randomDelay)
                         
-                        if fish and playerbar and bar then
-                            -- Get fish position (garis hitam vertikal)
-                            local fishX = fish.Position.X.Scale
-                            
-                            -- Get current playerbar position dan size
-                            local currentPlayerX = playerbar.Position.X.Scale
-                            local playerBarSize = playerbar.Size.X.Scale
-                            
-                            -- Calculate bar boundaries (zona bar putih)
-                            local barLeft = currentPlayerX
-                            local barRight = currentPlayerX + playerBarSize
-                            local barCenter = currentPlayerX + (playerBarSize / 2)
-                            
-                            -- Check apakah garis hitam dalam zona bar putih
-                            local fishInBar = fishX >= barLeft and fishX <= barRight
-                            
-                            -- Decision logic untuk hold/release dengan tolerance
-                            local shouldHold = false
-                            local tolerance = playerBarSize * 0.1 -- 10% tolerance untuk stability
-                            
-                            if fishInBar then
-                                -- Jika fish sudah di dalam bar, maintain dengan toleransi
-                                -- Hold jika fish lebih ke kanan dari center+tolerance
-                                if fishX > (barCenter + tolerance) then
-                                    shouldHold = true -- Hold untuk maintain fish di kanan
-                                elseif fishX < (barCenter - tolerance) then
-                                    shouldHold = false -- Release untuk maintain fish di kiri
-                                else
-                                    -- Dalam tolerance zone, maintain current state
-                                    shouldHold = autofarm.currentlyHolding
-                                end
-                            else
-                                -- Jika fish di luar bar, move bar untuk catch fish
-                                if fishX > (barRight + tolerance) then
-                                    -- Fish jauh di sebelah kanan bar, perlu hold untuk geser bar ke kanan
-                                    shouldHold = true
-                                elseif fishX < (barLeft - tolerance) then
-                                    -- Fish jauh di sebelah kiri bar, perlu release untuk geser bar ke kiri
-                                    shouldHold = false
-                                else
-                                    -- Fish dekat dengan bar edge, maintain current state untuk stability
-                                    shouldHold = autofarm.currentlyHolding
-                                end
+                        -- Auto reel ketika bar muncul
+                        local reelEvent = ReplicatedStorage:FindFirstChild("events")
+                        if reelEvent then
+                            local reelAction = reelEvent:FindFirstChild("reelfinished")
+                            if reelAction then
+                                reelAction:FireServer(100, true) -- Perfect reel
                             end
-                            
-                            -- Execute hold/release decision dengan anti-detection
-                            if shouldHold and not autofarm.currentlyHolding then
-                                -- Human reaction delay before hold
-                                humanDelay(0.02, 0.1)
-                                -- Miss chance untuk simulate human error
-                                if not shouldMiss() then
-                                    secureMouseEvent(0, true)
-                                    autofarm.currentlyHolding = true
-                                end
-                            elseif not shouldHold and autofarm.currentlyHolding then
-                                -- Human delay before release
-                                humanDelay(0.02, 0.08)
-                                secureMouseEvent(0, false)
-                                autofarm.currentlyHolding = false
-                            end
-                            
-                            -- Debug info
-                            local status = fishInBar and "IN_BAR" or "OUT_BAR"
-                            local action = shouldHold and "HOLD" or "RELEASE"
-                            local holding = autofarm.currentlyHolding and "HOLDING" or "NOT_HOLDING"
-                            local debugInfo = string.format(
-                                "Fish=%.0f%%, Bar=%.0f%%->%.0f%%, Status=%s, Action=%s, State=%s",
-                                fishX*100, barLeft*100, barRight*100, status, action, holding
-                            )
-                            print("Auto Reel Legit: " .. debugInfo)
                         end
                         
-                    elseif autofarm.reelMode == 2 then
-                        -- Mode 2: Instant - Perfect reel (seperti implementasi lama)
-                        local bar = reel:FindFirstChild("bar")
-                        if bar and bar.Visible then
-                            -- Auto reel ketika bar muncul
-                            local reelEvent = ReplicatedStorage:FindFirstChild("events")
-                            if reelEvent then
-                                local reelAction = reelEvent:FindFirstChild("reelfinished")
-                                if reelAction then
-                                    reelAction:FireServer(100, true) -- Perfect reel
-                                    print("Auto Reel Instant: Perfect reel applied!")
-                                end
-                            end
-                            
-                            -- Alternative method - simulate space key press
-                            UserInputService:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-                            wait(0.05)
-                            UserInputService:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
-                        end
+                        -- Alternative method - simulate space key press dengan random timing
+                        local keyDelay = math.random(20, 50) / 1000 -- 0.02-0.05 detik
+                        UserInputService:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+                        wait(keyDelay)
+                        UserInputService:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
                     end
                 end
                 
-                -- Backup method - check for reel prompt
+                -- Backup method - check for reel prompt dengan random response
                 local reelPrompt = playerGui:FindFirstChild("ReelPrompt")
                 if reelPrompt and reelPrompt.Visible then
+                    -- Random delay untuk reaksi prompt
+                    local promptDelay = math.random(80, 150) / 1000
+                    task.wait(promptDelay)
+                    
                     local reelEvent = ReplicatedStorage:FindFirstChild("events")
                     if reelEvent then
                         local reel = reelEvent:FindFirstChild("reel")
@@ -538,37 +361,18 @@ function autofarm.startAutoReel(mode)
                 warn("Auto Reel Error: " .. tostring(err))
             end
             
-            -- Adaptive delay berdasarkan rod characteristics
-            if autofarm.reelMode == 1 then
-                -- Dynamic delay berdasarkan deteksi speed rod
-                local playerGui = player:WaitForChild("PlayerGui")
-                local reel = playerGui:FindFirstChild("reel")
-                if reel then
-                    local playerbar = reel:FindFirstChild("playerbar")
-                    if playerbar then
-                        local barSize = playerbar.Size.X.Scale
-                        -- Rod dengan bar kecil = pergerakan cepat = delay lebih kecil
-                        if barSize < 0.15 then
-                            wait(0.01) -- Very fast rod (small bar)
-                        elseif barSize < 0.25 then
-                            wait(0.015) -- Fast rod
-                        else
-                            wait(0.02) -- Normal/slow rod
-                        end
-                    else
-                        wait(0.02) -- Default
-                    end
-                else
-                    wait(0.02) -- Default when no reel UI
-                end
-            else
-                wait(0.1) -- Normal delay untuk instant mode
-            end
+            -- Random wait time antara loop checks
+            local loopDelay = math.random(80, 120) / 1000 -- 0.08-0.12 detik
+            wait(loopDelay)
         end
     end)
 end
 
--- Always Catch (dari sanhub)
+function autofarm.stopAutoReel()
+    autofarm.autoReelEnabled = false
+end
+
+-- Always Catch (dari sanhub) dengan random response timing
 function autofarm.startAlwaysCatch()
     autofarm.alwaysCatchEnabled = true
     
@@ -581,19 +385,26 @@ function autofarm.startAlwaysCatch()
         -- Store original FireServer method
         local originalFireServer = reelfinished.FireServer
         
-        -- Override FireServer method
+        -- Override FireServer method dengan random processing time
         reelfinished.FireServer = function(self, ...)
             local args = {...}
             if autofarm.alwaysCatchEnabled then
-                -- Always catch dengan perfect score
-                args[1] = 100  -- Perfect score
+                -- Random delay untuk simulate thinking time
+                local thinkingDelay = math.random(10, 40) / 1000 -- 0.01-0.04 detik
+                task.wait(thinkingDelay)
+                
+                -- Random success rate (95-100% untuk variasi)
+                local successRate = math.random(95, 100)
+                
+                -- Always catch dengan random perfect scores
+                args[1] = successRate  -- Score antara 95-100
                 args[2] = true -- Success flag
-                print("Always Catch: Perfect catch applied!")
+                print("Always Catch: Perfect catch applied! (" .. successRate .. "%)")
             end
             return originalFireServer(self, unpack(args))
         end
         
-        print("Always Catch: Hook installed successfully!")
+        print("Always Catch: Hook installed successfully! (Random timing enabled)")
     end)
 end
 
@@ -643,21 +454,18 @@ function autofarm.getStatus()
         autoReel = autofarm.autoReelEnabled,
         alwaysCatch = autofarm.alwaysCatchEnabled,
         shakeMode = autofarm.shakeMode,
-        castMode = autofarm.castMode,
-        reelMode = autofarm.reelMode
+        castMode = autofarm.castMode
     }
 end
 
 -- Start all autofarm features
-function autofarm.startAll(shakeMode, castMode, reelMode)
+function autofarm.startAll(shakeMode, castMode)
     shakeMode = shakeMode or 1
     castMode = castMode or 1
-    reelMode = reelMode or 1
     autofarm.startAutoCast(castMode)
     autofarm.startAutoShake(shakeMode)
-    autofarm.startAutoReel(reelMode)
+    autofarm.startAutoReel()
     autofarm.startAlwaysCatch()
-    print("All Autofarm Started: Cast=" .. castMode .. ", Shake=" .. shakeMode .. ", Reel=" .. reelMode)
 end
 
 -- Stop all autofarm features
@@ -668,7 +476,6 @@ function autofarm.stopAll()
     autofarm.stopAlwaysCatch()
 end
 
--- Error handling dan reconnection
 -- Error handling dan reconnection
 local function handleCharacterRespawn()
     player.CharacterAdded:Connect(function(newCharacter)
@@ -681,7 +488,7 @@ local function handleCharacterRespawn()
             wait(2) -- Wait for character to load
             if status.autoCast then autofarm.startAutoCast(status.castMode) end
             if status.autoShake then autofarm.startAutoShake(status.shakeMode) end
-            if status.autoReel then autofarm.startAutoReel(status.reelMode) end
+            if status.autoReel then autofarm.startAutoReel() end
             if status.alwaysCatch then autofarm.startAlwaysCatch() end
         end
     end)
