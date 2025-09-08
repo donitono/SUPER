@@ -46,7 +46,8 @@ local Config = {
     AutoCast = {
         enabled = false,
         mode = "Legit", -- "Legit", "Rage"
-        delay = 2
+        delay = 2,
+        retryFailedCasts = true -- Auto retry when cast fails
     }
 }
 
@@ -401,26 +402,90 @@ local function setupAutoCast()
         connections.autoCast:Disconnect()
     end
     
+    if connections.autoCastFailed then
+        connections.autoCastFailed:Disconnect()
+    end
+    
+    if connections.autoCastReset then
+        connections.autoCastReset:Disconnect()
+    end
+    
+    local lastCastTime = 0
+    local hasCasted = false
+    
+    -- Function to perform cast
+    local function performCast(tool)
+        if not Config.AutoCast.enabled then return end
+        
+        hasCasted = true
+        lastCastTime = tick()
+        
+        if Config.AutoCast.mode == "Legit" then
+            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, LocalPlayer, 0)
+            HumanoidRootPart.ChildAdded:Connect(function()
+                if HumanoidRootPart:FindFirstChild("power") ~= nil and HumanoidRootPart.power.powerbar.bar ~= nil then
+                    HumanoidRootPart.power.powerbar.bar.Changed:Connect(function(property)
+                        if property == "Size" then
+                            if HumanoidRootPart.power.powerbar.bar.Size == UDim2.new(1, 0, 1, 0) then
+                                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, LocalPlayer, 0)
+                            end
+                        end
+                    end)
+                end
+            end)
+        elseif Config.AutoCast.mode == "Rage" then
+            tool.events.cast:FireServer(100)
+        end
+        
+        if Config.General.debugMode then
+            print("Cast performed at", tick())
+        end
+    end
+    
+    -- Main auto cast when tool is equipped
     connections.autoCast = LocalCharacter.ChildAdded:Connect(function(child)
         if child:IsA("Tool") and child:FindFirstChild("events") and child.events:FindFirstChild("cast") and Config.AutoCast.enabled then
             local currentDelay = getDelayForFeature("AutoCast")
             task.wait(currentDelay)
-            if Config.AutoCast.mode == "Legit" then
-                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, LocalPlayer, 0)
-                HumanoidRootPart.ChildAdded:Connect(function()
-                    if HumanoidRootPart:FindFirstChild("power") ~= nil and HumanoidRootPart.power.powerbar.bar ~= nil then
-                        HumanoidRootPart.power.powerbar.bar.Changed:Connect(function(property)
-                            if property == "Size" then
-                                if HumanoidRootPart.power.powerbar.bar.Size == UDim2.new(1, 0, 1, 0) then
-                                    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, LocalPlayer, 0)
-                                end
-                            end
-                        end)
+            performCast(child)
+        end
+    end)
+    
+    -- Detection for rod reset events (failed cast)
+    connections.autoCastReset = spawn(function()
+        while Config.AutoCast.enabled do
+            local tool = LocalCharacter:FindFirstChildOfClass("Tool")
+            if tool and tool:FindFirstChild("events") and tool.events:FindFirstChild("reset") then
+                -- Listen for reset event
+                local resetConnection
+                resetConnection = tool.events.reset.OnClientEvent:Connect(function()
+                    if Config.General.debugMode then
+                        print("Rod reset detected - likely failed cast")
                     end
+                    
+                    -- Only retry if we recently casted and no fish was caught
+                    if hasCasted and tick() - lastCastTime < 10 and Config.AutoCast.retryFailedCasts then
+                        hasCasted = false
+                        task.wait(getDelayForFeature("AutoCast") + math.random(1, 3)) -- Extra delay for retry
+                        
+                        local currentTool = LocalCharacter:FindFirstChildOfClass("Tool")
+                        if currentTool and Config.AutoCast.enabled then
+                            performCast(currentTool)
+                        end
+                    end
+                    
+                    resetConnection:Disconnect()
                 end)
-            elseif Config.AutoCast.mode == "Rage" then
-                child.events.cast:FireServer(100)
             end
+            task.wait(1) -- Check every second
+        end
+    end)
+    
+    -- Reset cast flag when fish is caught
+    connections.autoCastSuccess = ReplicatedStorage:WaitForChild("events").reelfinished.OnClientEvent:Connect(function()
+        hasCasted = false
+        if Config.General.debugMode then
+            print("Fish caught - reset cast flag")
         end
     end)
 end
@@ -591,12 +656,22 @@ local AutoCastDelay = Tabs.Main:AddSlider("AutoCastDelay", {
     end
 })
 
+local AutoCastRetry = Tabs.Main:AddToggle("AutoCastRetry", {
+    Title = "Retry Failed Casts",
+    Description = "Automatically retry when cast doesn't hit water",
+    Default = Config.AutoCast.retryFailedCasts,
+    Callback = function(Value)
+        Config.AutoCast.retryFailedCasts = Value
+        print("Auto Cast Retry:", Value and "Enabled" or "Disabled")
+    end
+})
+
 -- Settings Tab
 Tabs.Settings:AddSection("Information")
 
 Tabs.Settings:AddParagraph({
-    Title = "SUPER HUB v1.3",
-    Content = "A modular fishing script with multiple safety modes and improved reel system.\n\n🟢 Safe Mode: Maximum safety, human-like delays\n🟡 Normal Mode: Balanced performance\n🟠 Risky Mode: Faster but riskier\n🔴 Rage Mode: Maximum speed, HIGH RISK!\n\n🎣 Reel Modes:\n• Normal: Realistic progress following with fallback\n• Perfect: Follows progress bar perfectly\n• Instant: Immediate completion\n\n🔧 Debug Mode: Enable to see GUI structure"
+    Title = "SUPER HUB v1.4",
+    Content = "A modular fishing script with multiple safety modes and failed cast retry.\n\n🟢 Safe Mode: Maximum safety, human-like delays\n🟡 Normal Mode: Balanced performance\n🟠 Risky Mode: Faster but riskier\n🔴 Rage Mode: Maximum speed, HIGH RISK!\n\n🎣 Auto Cast Features:\n• Failed cast detection and retry\n• Multiple cast modes (Legit/Rage)\n• Smart timing system\n\n🔧 Debug Mode: Enable to see system activity"
 })
 
 Tabs.Settings:AddSection("Current Mode Info")
@@ -677,16 +752,20 @@ initializeConnections()
 
 -- Welcome notification
 Fluent:Notify({
-    Title = "SUPER HUB v1.3",
-    Content = "Successfully loaded with " .. Config.General.mode .. " mode! Improved reel system with debug mode.",
+    Title = "SUPER HUB v1.4",
+    Content = "Successfully loaded with " .. Config.General.mode .. " mode! Failed cast retry system enabled.",
     Duration = 5
 })
 
 -- Cleanup function when script is stopped
 local function cleanup()
     for name, connection in pairs(connections) do
-        if connection and connection.Disconnect then
-            connection:Disconnect()
+        if connection then
+            if typeof(connection) == "RBXScriptConnection" and connection.Disconnect then
+                connection:Disconnect()
+            elseif typeof(connection) == "thread" then
+                task.cancel(connection)
+            end
         end
     end
     print("SUPER HUB: Cleaned up all connections")
