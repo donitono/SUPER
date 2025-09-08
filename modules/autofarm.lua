@@ -298,10 +298,19 @@ end
 -- Auto Reel States
 autofarm.autoReelEnabled = false
 autofarm.reelMode = 1 -- 1 = legit (follow fish), 2 = instant (perfect)
+autofarm.currentlyHolding = false -- Track current hold state
 
 -- Auto Reel stop function
 function autofarm.stopAutoReel()
     autofarm.autoReelEnabled = false
+    
+    -- Release any held mouse button
+    if autofarm.currentlyHolding then
+        local VirtualInputManager = game:GetService("VirtualInputManager")
+        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, player, 0)
+        autofarm.currentlyHolding = false
+    end
+    
     print("Auto Reel stopped")
 end
 
@@ -316,96 +325,82 @@ function autofarm.startAutoReel(mode)
                 local playerGui = player:WaitForChild("PlayerGui")
                 local reel = playerGui:FindFirstChild("reel")
                 
-                -- Debug: Print all children of PlayerGui untuk identify UI elements
-                if not reel then
-                    print("DEBUG: Reel UI not found, searching for alternatives...")
-                    for _, child in pairs(playerGui:GetChildren()) do
-                        if child:IsA("ScreenGui") or child:IsA("Frame") then
-                            print("DEBUG: Found GUI element: " .. child.Name)
-                            if child.Name:lower():find("reel") or child.Name:lower():find("fish") or child.Name:lower():find("mini") then
-                                reel = child
-                                print("DEBUG: Using alternative reel UI: " .. child.Name)
-                                break
-                            end
-                        end
-                    end
-                end
-                
                 if reel and reel.Visible then
                     if autofarm.reelMode == 1 then
-                        -- Mode 1: Legit - Follow fish line dengan mouse hold/release simulation
+                        -- Mode 1: Legit - Hold/Release system untuk control bar putih
                         local fish = reel:FindFirstChild("fish")
                         local playerbar = reel:FindFirstChild("playerbar") 
                         local bar = reel:FindFirstChild("bar") -- Progress bar
                         
-                        -- Fallback detection untuk UI elements yang berbeda
-                        if not fish then fish = reel:FindFirstChild("Fish") end
-                        if not fish then fish = reel:FindFirstChild("fishline") end
-                        if not playerbar then playerbar = reel:FindFirstChild("PlayerBar") end
-                        if not playerbar then playerbar = reel:FindFirstChild("player") end
-                        if not bar then bar = reel:FindFirstChild("progressbar") end
-                        if not bar then bar = reel:FindFirstChild("progress") end
-                        
-                        if fish and playerbar then
-                            -- Get fish position (garis hitam)
+                        if fish and playerbar and bar then
+                            -- Get fish position (garis hitam vertikal)
                             local fishX = fish.Position.X.Scale
-                            local fishY = fish.Position.Y.Scale
                             
                             -- Get current playerbar position dan size
                             local currentPlayerX = playerbar.Position.X.Scale
-                            local playerBarSize = playerbar.Size.X.Scale -- Deteksi panjang bar putih
+                            local playerBarSize = playerbar.Size.X.Scale
                             
-                            -- Calculate if fish is in the center zone of player bar
-                            local playerBarCenter = currentPlayerX + (playerBarSize / 2)
-                            local centerDistance = math.abs(fishX - playerBarCenter)
-                            local tolerance = playerBarSize * 0.4 -- 40% tolerance dari center
+                            -- Calculate bar boundaries (zona bar putih)
+                            local barLeft = currentPlayerX
+                            local barRight = currentPlayerX + playerBarSize
+                            local barCenter = currentPlayerX + (playerBarSize / 2)
                             
-                            -- Check fish position relative to player bar
-                            local fishInLeftSide = fishX < (currentPlayerX + playerBarSize * 0.3)
-                            local fishInRightSide = fishX > (currentPlayerX + playerBarSize * 0.7)
-                            local fishInCenter = not fishInLeftSide and not fishInRightSide
+                            -- Check apakah garis hitam dalam zona bar putih
+                            local fishInBar = fishX >= barLeft and fishX <= barRight
                             
-                            -- Determine if we should hold mouse or release
+                            -- Decision logic untuk hold/release dengan tolerance
                             local shouldHold = false
+                            local tolerance = playerBarSize * 0.1 -- 10% tolerance untuk stability
                             
-                            if fishInCenter then
-                                -- Fish di tengah - tahan mouse untuk maintain position
-                                shouldHold = true
-                            elseif fishInLeftSide then
-                                -- Fish di kiri - release mouse untuk bergerak kiri
-                                shouldHold = false
-                            elseif fishInRightSide then
-                                -- Fish di kanan - tahan mouse untuk bergerak kanan
-                                shouldHold = true
+                            if fishInBar then
+                                -- Jika fish sudah di dalam bar, maintain dengan toleransi
+                                -- Hold jika fish lebih ke kanan dari center+tolerance
+                                if fishX > (barCenter + tolerance) then
+                                    shouldHold = true -- Hold untuk maintain fish di kanan
+                                elseif fishX < (barCenter - tolerance) then
+                                    shouldHold = false -- Release untuk maintain fish di kiri
+                                else
+                                    -- Dalam tolerance zone, maintain current state
+                                    shouldHold = autofarm.currentlyHolding
+                                end
+                            else
+                                -- Jika fish di luar bar, move bar untuk catch fish
+                                if fishX > (barRight + tolerance) then
+                                    -- Fish jauh di sebelah kanan bar, perlu hold untuk geser bar ke kanan
+                                    shouldHold = true
+                                elseif fishX < (barLeft - tolerance) then
+                                    -- Fish jauh di sebelah kiri bar, perlu release untuk geser bar ke kiri
+                                    shouldHold = false
+                                else
+                                    -- Fish dekat dengan bar edge, maintain current state untuk stability
+                                    shouldHold = autofarm.currentlyHolding
+                                end
                             end
                             
-                            -- Implement mouse hold/release based on fish position
+                            -- Execute hold/release decision dengan anti-spam
                             local VirtualInputManager = game:GetService("VirtualInputManager")
                             
-                            if shouldHold then
-                                -- Hold mouse untuk control reel
+                            if shouldHold and not autofarm.currentlyHolding then
+                                -- Start holding - send mouse down
                                 VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, player, 0)
-                            else
-                                -- Release mouse untuk let reel move naturally
+                                autofarm.currentlyHolding = true
+                            elseif not shouldHold and autofarm.currentlyHolding then
+                                -- Stop holding - send mouse up
                                 VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, player, 0)
+                                autofarm.currentlyHolding = false
                             end
                             
-                            -- Enhanced debug info
+                            -- Debug info
+                            local status = fishInBar and "IN_BAR" or "OUT_BAR"
+                            local action = shouldHold and "HOLD" or "RELEASE"
+                            local holding = autofarm.currentlyHolding and "HOLDING" or "NOT_HOLDING"
                             local debugInfo = string.format(
-                                "Fish=%.0f%%, Player=%.0f%%, Size=%.0f%%, Center=%.0f%%, Hold=%s, Zone=%s",
-                                fishX*100, currentPlayerX*100, playerBarSize*100, playerBarCenter*100, 
-                                tostring(shouldHold), 
-                                fishInCenter and "CENTER" or (fishInLeftSide and "LEFT" or "RIGHT")
+                                "Fish=%.0f%%, Bar=%.0f%%->%.0f%%, Status=%s, Action=%s, State=%s",
+                                fishX*100, barLeft*100, barRight*100, status, action, holding
+                            )
+                                fishX*100, barLeft*100, barRight*100, barCenter*100, status, action
                             )
                             print("Auto Reel Legit: " .. debugInfo)
-                        else
-                            -- Fallback: Jika tidak bisa detect fish/playerbar, gunakan general mouse hold
-                            local VirtualInputManager = game:GetService("VirtualInputManager")
-                            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, player, 0)
-                            wait(0.1)
-                            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, player, 0)
-                            print("Auto Reel Legit: Fallback mode - no fish/playerbar detected")
-                        end
                         end
                         
                     elseif autofarm.reelMode == 2 then
@@ -447,13 +442,31 @@ function autofarm.startAutoReel(mode)
                 warn("Auto Reel Error: " .. tostring(err))
             end
             
-            -- Adaptive delay berdasarkan mode dan rod characteristics
+            -- Adaptive delay berdasarkan rod characteristics
             if autofarm.reelMode == 1 then
-                -- Mode Legit: Sangat cepat untuk responsive fish following
-                wait(0.01) -- 100 FPS untuk smooth tracking
+                -- Dynamic delay berdasarkan deteksi speed rod
+                local playerGui = player:WaitForChild("PlayerGui")
+                local reel = playerGui:FindFirstChild("reel")
+                if reel then
+                    local playerbar = reel:FindFirstChild("playerbar")
+                    if playerbar then
+                        local barSize = playerbar.Size.X.Scale
+                        -- Rod dengan bar kecil = pergerakan cepat = delay lebih kecil
+                        if barSize < 0.15 then
+                            wait(0.01) -- Very fast rod (small bar)
+                        elseif barSize < 0.25 then
+                            wait(0.015) -- Fast rod
+                        else
+                            wait(0.02) -- Normal/slow rod
+                        end
+                    else
+                        wait(0.02) -- Default
+                    end
+                else
+                    wait(0.02) -- Default when no reel UI
+                end
             else
-                -- Mode Instant: Normal delay
-                wait(0.1) -- 10 FPS untuk instant mode
+                wait(0.1) -- Normal delay untuk instant mode
             end
         end
     end)
