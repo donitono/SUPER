@@ -14,7 +14,7 @@ local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 
 -- Load Modules (dari repository kita sendiri)
-local autofarm = loadstring(game:HttpGet("https://raw.githubusercontent.com/donitono/SUPER/main/modules/autofarm_simple.lua"))()
+local autofarm = loadstring(game:HttpGet("https://raw.githubusercontent.com/donitono/SUPER/main/modules/autofarm.lua"))()
 -- teleports dan player modules akan dibuat nanti, sementara pakai fallback methods
 
 -- Create Main Window
@@ -71,22 +71,11 @@ AutofarmSection:NewToggle("Auto Shake", "Automatically shake when needed", funct
     end
 end)
 
--- Auto Reel Mode Selection
-local currentReelMode = 1
-AutofarmSection:NewDropdown("Reel Mode", "Select auto reel mode", {"Legit (Follow Fish)", "Instant (Perfect)"}, function(option)
-    if option == "Legit (Follow Fish)" then
-        currentReelMode = 1
-    elseif option == "Instant (Perfect)" then
-        currentReelMode = 2
-    end
-    autofarm.reelMode = currentReelMode
-    print("Auto Reel mode set to: " .. option)
-end)
-
-AutofarmSection:NewToggle("Auto Reel", "Automatically reel fish with selected mode", function(state)
+-- Auto Reel
+AutofarmSection:NewToggle("Auto Reel", "Automatically reel in fish", function(state)
     if state then
-        autofarm.startAutoReel(currentReelMode)
-        print("Auto Reel: Enabled (Mode " .. (currentReelMode == 1 and "Legit" or "Instant") .. ")")
+        autofarm.startAutoReel()
+        print("Auto Reel: Enabled")
     else
         autofarm.stopAutoReel()
         print("Auto Reel: Disabled")
@@ -108,9 +97,9 @@ end)
 local QuickSection = AutofarmTab:NewSection("Quick Actions")
 
 QuickSection:NewButton("Start All Autofarm", "Enable all autofarm features", function()
-    autofarm.startAll(currentShakeMode, currentCastMode, currentReelMode)
+    autofarm.startAll(currentShakeMode, currentCastMode)
     print("All Autofarm Features: Enabled")
-    print("Cast Mode: " .. currentCastMode .. ", Shake Mode: " .. currentShakeMode .. ", Reel Mode: " .. currentReelMode)
+    print("Cast Mode: " .. currentCastMode .. ", Shake Mode: " .. currentShakeMode)
 end)
 
 QuickSection:NewButton("Stop All Autofarm", "Disable all autofarm features", function()
@@ -127,7 +116,6 @@ QuickSection:NewButton("Check Status", "Show current autofarm status", function(
     print("Always Catch: " .. tostring(status.alwaysCatch))
     print("Cast Mode: " .. tostring(status.castMode))
     print("Shake Mode: " .. tostring(status.shakeMode))
-    print("Reel Mode: " .. tostring(autofarm.reelMode))
     print("=====================")
 end)
 
@@ -243,65 +231,6 @@ end)
 -- Misc Tab
 local MiscTab = Window:NewTab("⚙️ Misc")
 local MiscSection = MiscTab:NewSection("Miscellaneous")
-
--- Anti-Detection Settings
-local AntiDetectionSection = MiscTab:NewSection("🛡️ Anti-Detection")
-
-AntiDetectionSection:NewToggle("Enable Anti-Detection", "Make script behavior more human-like", function(state)
-    if autofarm then
-        -- Access anti-detection settings in autofarm module
-        spawn(function()
-            local success, err = pcall(function()
-                local antiDetectionCode = [[
-                    if antiDetection then
-                        antiDetection.enabled = ]] .. tostring(state) .. [[
-                        print("Anti-Detection: ]] .. (state and "Enabled" or "Disabled") .. [[")
-                    end
-                ]]
-                loadstring(antiDetectionCode)()
-            end)
-            if not success then
-                warn("Anti-Detection toggle error: " .. tostring(err))
-            end
-        end)
-    end
-    print("Anti-Detection: " .. (state and "Enabled" or "Disabled"))
-end)
-
-AntiDetectionSection:NewSlider("Miss Chance %", "Chance to miss like human (0-10%)", 10, 0, function(value)
-    spawn(function()
-        local success, err = pcall(function()
-            local missChanceCode = [[
-                if antiDetection then
-                    antiDetection.missChance = ]] .. value .. [[
-                    print("Miss Chance set to: ]] .. value .. [[%")
-                end
-            ]]
-            loadstring(missChanceCode)()
-        end)
-        if not success then
-            warn("Miss chance setting error: " .. tostring(err))
-        end
-    end)
-end)
-
-AntiDetectionSection:NewSlider("Reaction Time (ms)", "Human reaction time 50-500ms", 500, 50, function(value)
-    local reactionTime = value / 1000
-    spawn(function()
-        local success, err = pcall(function()
-            local reactionCode = [[
-                if antiDetection then
-                    antiDetection.reactionTime.max = ]] .. reactionTime .. [[
-                    print("Max Reaction Time: ]] .. value .. [[ms")
-                end
-            ]]
-            loadstring(reactionCode)()
-        end)
-        if not success then
-            warn("Reaction time setting error: " .. tostring(err))
-        end
-    end)
-end)
 
 -- Game modifications
 MiscSection:NewToggle("Perfect Cast", "Always perfect cast", function(state)

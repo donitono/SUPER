@@ -34,9 +34,7 @@ function autofarm.startAutoCast(mode)
         if child:IsA("Tool") and child:FindFirstChild("events") then
             local castEvent = child.events:FindFirstChild("cast")
             if castEvent then
-                -- Random delay sebelum cast untuk terlihat natural
-                local randomDelay = math.random(150, 350) / 100 -- 1.5 - 3.5 detik
-                task.wait(randomDelay)
+                task.wait(2) -- Delay sebelum cast
                 
                 local success, err = pcall(function()
                     if autofarm.castMode == 1 then
@@ -115,9 +113,7 @@ function autofarm.startAutoCast(mode)
             if tool and tool:FindFirstChild("events") then
                 local castEvent = tool.events:FindFirstChild("cast")
                 if castEvent then
-                    -- Random delay sebelum recast untuk terlihat natural
-                    local randomRecastDelay = math.random(200, 400) / 100 -- 2 - 4 detik
-                    task.wait(randomRecastDelay)
+                    task.wait(2) -- Delay sebelum recast
                     
                     local success, err = pcall(function()
                         if autofarm.castMode == 1 then
@@ -191,7 +187,7 @@ function autofarm.startAutoCast(mode)
     autofarm.castConnection1 = character.ChildAdded:Connect(onCharacterChildAdded)
     autofarm.castConnection2 = player.PlayerGui.ChildRemoved:Connect(onGuiRemoved)
     
-        print("Auto Reel started (Random delays enabled)")
+    print("Auto Cast started with mode: " .. autofarm.castMode)
 end
 
 function autofarm.stopAutoCast()
@@ -216,8 +212,8 @@ function autofarm.startAutoShake(mode)
     autofarm.shakeMode = mode or 1
     
     if autofarm.shakeMode == 1 then
-        -- Mode 1: Method dari sanhub - RenderStepped checking dengan random delays
-        local function handleShakeSanHub()
+        -- Mode 1: Method dari sanhub - continuous checking
+        local function handleShake()
             if not autofarm.autoShakeEnabled then return end
             
             local success, err = pcall(function()
@@ -229,10 +225,6 @@ function autofarm.startAutoShake(mode)
                     if safezone then
                         local button = safezone:FindFirstChild("button")
                         if button then
-                            -- Random delay sebelum shake
-                            local randomDelay = math.random(20, 60) / 1000 -- 0.02 - 0.06 detik
-                            task.wait(randomDelay)
-                            
                             -- Set selected object dan send return key
                             game:GetService("GuiService").SelectedObject = button
                             if game:GetService("GuiService").SelectedObject == button then
@@ -247,37 +239,43 @@ function autofarm.startAutoShake(mode)
             end)
             
             if not success then
-                warn("Auto Shake SanHub Error: " .. tostring(err))
+                warn("Auto Shake Error: " .. tostring(err))
             end
         end
         
         -- Connect to RenderStepped untuk continuous checking
-        autofarm.shakeConnection = RunService.RenderStepped:Connect(handleShakeSanHub)
+        autofarm.shakeConnection = RunService.RenderStepped:Connect(handleShake)
         
     elseif autofarm.shakeMode == 2 then
-        -- Mode 2: Method dari neoxhub - DescendantAdded detection dengan random delays
-        local function handleShakeNeoxHub(descendant)
+        -- Mode 2: Method dari neoxhub - event-driven approach
+        local function onShakeUIAdded(descendant)
             if not autofarm.autoShakeEnabled then return end
             
             local success, err = pcall(function()
-                -- Detect shake button seperti neoxhub
+                -- Detect shake UI button seperti di neoxhub
                 if descendant.Name == "button" and descendant.Parent and descendant.Parent.Name == "safezone" then
-                    -- Random delay sebelum shake (variasi dari 0.2-0.5 detik)
-                    local randomDelay = math.random(200, 500) / 1000
-                    task.wait(randomDelay)
+                    task.wait(0.3) -- Delay seperti di neoxhub
                     
-                    -- Set selected object
+                    -- Method 1: Set SelectedObject + Return key (seperti neoxhub)
                     game:GetService("GuiService").SelectedObject = descendant
-                    
-                    -- Send return key
                     local VirtualInputManager = game:GetService("VirtualInputManager")
                     VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
                     VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
                     
-                    task.wait(0.1) -- Small delay
+                    task.wait(0.1)
                     game:GetService("GuiService").SelectedObject = nil
                     
-                    print("Shake performed (NeoxHub method)")
+                    print("Shake performed (NeoxHub event method)")
+                    
+                    -- Method 2: Backup dengan tool shake event
+                    local tool = character:FindFirstChildOfClass("Tool")
+                    if tool and tool:FindFirstChild("events") then
+                        local shakeEvent = tool.events:FindFirstChild("shake")
+                        if shakeEvent then
+                            shakeEvent:FireServer()
+                            print("Shake backup performed (Tool method)")
+                        end
+                    end
                 end
             end)
             
@@ -286,11 +284,11 @@ function autofarm.startAutoShake(mode)
             end
         end
         
-        -- Connect to DescendantAdded seperti neoxhub
-        autofarm.shakeConnection = player.PlayerGui.DescendantAdded:Connect(handleShakeNeoxHub)
+        -- Connect to PlayerGui.DescendantAdded seperti neoxhub
+        autofarm.shakeConnection = player.PlayerGui.DescendantAdded:Connect(onShakeUIAdded)
     end
     
-    print("Auto Shake started with mode: " .. autofarm.shakeMode .. " (Random delays enabled)")
+    print("Auto Shake started with mode: " .. autofarm.shakeMode)
 end
 
 function autofarm.stopAutoShake()
@@ -305,24 +303,20 @@ function autofarm.stopAutoShake()
     print("Auto Shake stopped")
 end
 
--- Auto Reel (dari sanhub dengan random delays)
+-- Auto Reel (dari sanhub)
 function autofarm.startAutoReel()
     autofarm.autoReelEnabled = true
     
     spawn(function()
         while autofarm.autoReelEnabled do
             local success, err = pcall(function()
-                -- Method dari sanhub dengan random timing
+                -- Method dari sanhub
                 local playerGui = player:WaitForChild("PlayerGui")
                 local reel = playerGui:FindFirstChild("reel")
                 
                 if reel then
                     local bar = reel:FindFirstChild("bar")
                     if bar and bar.Visible then
-                        -- Random delay sebelum reel (0.1-0.3 detik)
-                        local randomDelay = math.random(100, 300) / 1000
-                        task.wait(randomDelay)
-                        
                         -- Auto reel ketika bar muncul
                         local reelEvent = ReplicatedStorage:FindFirstChild("events")
                         if reelEvent then
@@ -332,21 +326,16 @@ function autofarm.startAutoReel()
                             end
                         end
                         
-                        -- Alternative method - simulate space key press dengan random timing
-                        local keyDelay = math.random(20, 50) / 1000 -- 0.02-0.05 detik
+                        -- Alternative method - simulate space key press
                         UserInputService:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-                        wait(keyDelay)
+                        wait(0.05)
                         UserInputService:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
                     end
                 end
                 
-                -- Backup method - check for reel prompt dengan random response
+                -- Backup method - check for reel prompt
                 local reelPrompt = playerGui:FindFirstChild("ReelPrompt")
                 if reelPrompt and reelPrompt.Visible then
-                    -- Random delay untuk reaksi prompt
-                    local promptDelay = math.random(80, 150) / 1000
-                    task.wait(promptDelay)
-                    
                     local reelEvent = ReplicatedStorage:FindFirstChild("events")
                     if reelEvent then
                         local reel = reelEvent:FindFirstChild("reel")
@@ -361,9 +350,7 @@ function autofarm.startAutoReel()
                 warn("Auto Reel Error: " .. tostring(err))
             end
             
-            -- Random wait time antara loop checks
-            local loopDelay = math.random(80, 120) / 1000 -- 0.08-0.12 detik
-            wait(loopDelay)
+            wait(0.1)
         end
     end)
 end
@@ -372,7 +359,7 @@ function autofarm.stopAutoReel()
     autofarm.autoReelEnabled = false
 end
 
--- Always Catch (dari sanhub) dengan random response timing
+-- Always Catch (dari sanhub)
 function autofarm.startAlwaysCatch()
     autofarm.alwaysCatchEnabled = true
     
@@ -385,26 +372,19 @@ function autofarm.startAlwaysCatch()
         -- Store original FireServer method
         local originalFireServer = reelfinished.FireServer
         
-        -- Override FireServer method dengan random processing time
+        -- Override FireServer method
         reelfinished.FireServer = function(self, ...)
             local args = {...}
             if autofarm.alwaysCatchEnabled then
-                -- Random delay untuk simulate thinking time
-                local thinkingDelay = math.random(10, 40) / 1000 -- 0.01-0.04 detik
-                task.wait(thinkingDelay)
-                
-                -- Random success rate (95-100% untuk variasi)
-                local successRate = math.random(95, 100)
-                
-                -- Always catch dengan random perfect scores
-                args[1] = successRate  -- Score antara 95-100
+                -- Always catch dengan perfect score
+                args[1] = 100  -- Perfect score
                 args[2] = true -- Success flag
-                print("Always Catch: Perfect catch applied! (" .. successRate .. "%)")
+                print("Always Catch: Perfect catch applied!")
             end
             return originalFireServer(self, unpack(args))
         end
         
-        print("Always Catch: Hook installed successfully! (Random timing enabled)")
+        print("Always Catch: Hook installed successfully!")
     end)
 end
 
