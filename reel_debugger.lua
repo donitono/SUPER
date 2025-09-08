@@ -247,23 +247,95 @@ local function saveLogToFile()
         content = content .. "Total Entries: " .. #logData .. "\n\n"
         content = content .. table.concat(logData, "\n")
         
-        -- Use writefile if available (Synapse/Krnl)
-        if writefile then
-            writefile(fileName, content)
-            addLog("✅ Log saved to: " .. fileName, "SUCCESS")
-        else
-            -- Alternative: Copy to clipboard if available
-            if setclipboard then
-                setclipboard(content)
-                addLog("📋 Log copied to clipboard (writefile not available)", "INFO")
+        -- Try multiple save methods in order of preference
+        local saveMethod = "none"
+        
+        -- Method 1: Try writefile (Desktop executors)
+        if writefile and type(writefile) == "function" then
+            local writeSuccess, writeErr = pcall(function()
+                writefile(fileName, content)
+            end)
+            if writeSuccess then
+                saveMethod = "writefile"
+                addLog("✅ Log saved to file: " .. fileName, "SUCCESS")
             else
-                addLog("❌ No file writing method available", "ERROR")
+                addLog("⚠️ writefile failed: " .. tostring(writeErr), "WARNING")
             end
         end
+        
+        -- Method 2: Try setclipboard (Most executors support this)
+        if saveMethod == "none" and setclipboard and type(setclipboard) == "function" then
+            local clipSuccess, clipErr = pcall(function()
+                setclipboard(content)
+            end)
+            if clipSuccess then
+                saveMethod = "clipboard"
+                addLog("📋 Log copied to clipboard! Paste into notes app to save", "SUCCESS")
+                addLog("💡 Tip: Open notes app and paste (Ctrl+V) to save log", "INFO")
+            else
+                addLog("⚠️ setclipboard failed: " .. tostring(clipErr), "WARNING")
+            end
+        end
+        
+        -- Method 3: Try makefolderifnotexist + writefile for mobile
+        if saveMethod == "none" and makefolderifnotexist and type(makefolderifnotexist) == "function" then
+            local mobileSuccess, mobileErr = pcall(function()
+                makefolderifnotexist("ReelDebugger")
+                writefile("ReelDebugger/" .. fileName, content)
+            end)
+            if mobileSuccess then
+                saveMethod = "mobile"
+                addLog("✅ Log saved to ReelDebugger folder: " .. fileName, "SUCCESS")
+            else
+                addLog("⚠️ Mobile save failed: " .. tostring(mobileErr), "WARNING")
+            end
+        end
+        
+        -- Method 4: Display in chat/console as fallback
+        if saveMethod == "none" then
+            addLog("📄 LOG CONTENT (Copy manually):", "FALLBACK")
+            addLog("─────────────────────────────", "FALLBACK")
+            
+            -- Split content into smaller chunks for chat
+            local lines = {}
+            for line in content:gmatch("[^\n]+") do
+                table.insert(lines, line)
+            end
+            
+            -- Display first 20 lines in UI
+            for i = 1, math.min(20, #lines) do
+                addLog(lines[i], "EXPORT")
+            end
+            
+            if #lines > 20 then
+                addLog("... (" .. (#lines - 20) .. " more lines truncated)", "EXPORT")
+                addLog("💡 Use clipboard method or check console for full log", "INFO")
+            end
+            
+            addLog("─────────────────────────────", "FALLBACK")
+            
+            -- Also print to console
+            print("=== FULL REEL DEBUG LOG ===")
+            print(content)
+            print("=== END LOG ===")
+            
+            addLog("✅ Log displayed above and printed to console", "SUCCESS")
+        end
+        
+        -- Show available methods info
+        addLog("📱 Available save methods on this executor:", "INFO")
+        if writefile then addLog("  ✅ writefile - File writing supported", "INFO") end
+        if setclipboard then addLog("  ✅ setclipboard - Clipboard supported", "INFO") end
+        if makefolderifnotexist then addLog("  ✅ makefolderifnotexist - Mobile folders supported", "INFO") end
+        if not writefile and not setclipboard and not makefolderifnotexist then
+            addLog("  ❌ No advanced save methods available", "INFO")
+        end
+        
     end)
     
     if not success then
-        addLog("❌ Save failed: " .. tostring(err), "ERROR")
+        addLog("❌ Save operation failed: " .. tostring(err), "ERROR")
+        addLog("💡 Try using _G.ReelDebugger.exportToChat() for manual copy", "INFO")
     end
 end
 
@@ -494,6 +566,55 @@ _G.ReelDebugger = {
     
     test = function()
         testReelEvents()
+    end,
+    
+    exportToChat = function()
+        addLog("📤 Exporting log to chat...", "EXPORT")
+        local content = table.concat(logData, "\n")
+        local lines = {}
+        for line in content:gmatch("[^\n]+") do
+            table.insert(lines, line)
+        end
+        
+        -- Send in chunks of 5 lines each
+        for i = 1, #lines, 5 do
+            local chunk = ""
+            for j = i, math.min(i + 4, #lines) do
+                chunk = chunk .. lines[j] .. "\n"
+            end
+            game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(chunk, "All")
+            wait(0.1) -- Small delay to avoid spam
+        end
+        addLog("✅ Log exported to chat", "SUCCESS")
+    end,
+    
+    getExecutorInfo = function()
+        addLog("🔍 Executor Compatibility Check:", "INFO")
+        addLog("writefile: " .. tostring(writefile ~= nil), "INFO")
+        addLog("setclipboard: " .. tostring(setclipboard ~= nil), "INFO")
+        addLog("makefolderifnotexist: " .. tostring(makefolderifnotexist ~= nil), "INFO")
+        addLog("readfile: " .. tostring(readfile ~= nil), "INFO")
+        addLog("isfolder: " .. tostring(isfolder ~= nil), "INFO")
+        addLog("isfile: " .. tostring(isfile ~= nil), "INFO")
+        
+        -- Detect executor type
+        local executorName = "Unknown"
+        if syn and syn.request then
+            executorName = "Synapse X"
+        elseif KRNL_LOADED then
+            executorName = "Krnl"
+        elseif getgenv and getgenv().FLUXUS_LOADED then
+            executorName = "Fluxus"
+        elseif getgenv and getgenv().COMET_LOADED then
+            executorName = "Comet"
+        elseif Delta and Delta.request then
+            executorName = "Delta"
+        elseif getgenv and getgenv().ARCEUS_LOADED then
+            executorName = "Arceus X"
+        end
+        
+        addLog("Detected Executor: " .. executorName, "INFO")
+        return executorName
     end
 }
 
@@ -503,3 +624,8 @@ addLog("_G.ReelDebugger.saveLog() - Save current log", "SYSTEM")
 addLog("_G.ReelDebugger.clearLog() - Clear current log", "SYSTEM")
 addLog("_G.ReelDebugger.analyze() - Analyze current reel", "SYSTEM")
 addLog("_G.ReelDebugger.test() - Test reel events", "SYSTEM")
+addLog("_G.ReelDebugger.exportToChat() - Export log to game chat", "SYSTEM")
+addLog("_G.ReelDebugger.getExecutorInfo() - Check executor compatibility", "SYSTEM")
+
+-- Check executor compatibility on startup
+_G.ReelDebugger.getExecutorInfo()
