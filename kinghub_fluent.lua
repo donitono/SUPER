@@ -5,6 +5,11 @@ local env = getgenv()
 env.Options = env.Options or Options
 env.Toggles = env.Toggles or Toggles
 
+-- Executor compatibility fallbacks
+local _tick = (typeof(tick) == 'function' and tick) or os.clock
+local setclipboard = typeof(setclipboard) == 'function' and setclipboard or function(_) end
+local setfpscap = typeof(setfpscap) == 'function' and setfpscap or function(_) end
+
 local Library = { _watermark = '', _unloadCbs = {}, Unloaded = false }
 
 local function makeGroupBox(name)
@@ -89,13 +94,13 @@ local Window = Library:CreateWindow({
 })
 
 -- FPS watermark (simplified)
-local FrameTimer, FrameCounter, FPS = tick(), 0, 60
+local FrameTimer, FrameCounter, FPS = _tick(), 0, 60
 local RunService = game:GetService('RunService')
 local Stats = game:GetService('Stats')
 local WatermarkConnection = RunService.RenderStepped:Connect(function()
     FrameCounter += 1
-    if tick() - FrameTimer >= 1 then
-        FPS = FrameCounter; FrameTimer = tick(); FrameCounter = 0
+    if _tick() - FrameTimer >= 1 then
+        FPS = FrameCounter; FrameTimer = _tick(); FrameCounter = 0
     end
     local ping = 0
     local okPing, pingItem = pcall(function() return Stats.Network.ServerStatsItem['Data Ping']:GetValue() end)
@@ -429,8 +434,10 @@ SaveManager:LoadAutoloadConfig()
 local Version = '1.2.3'
 task.spawn(function()
     local success, LatestVer = pcall(function()
-        local raw = game:HttpGet('https://raw.githubusercontent.com/kylosilly/femboyware/refs/heads/main/fischver')
-        return HttpService:JSONDecode(raw)
+        if not (syn and syn.request) then -- normal HttpGet ok
+            local raw = game:HttpGet('https://raw.githubusercontent.com/kylosilly/femboyware/refs/heads/main/fischver')
+            return HttpService:JSONDecode(raw)
+        end
     end)
     if success and LatestVer and Version ~= LatestVer then
         Library:Notify('You are using an outdated version of the Fisch script.')
