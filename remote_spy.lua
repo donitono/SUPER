@@ -23,7 +23,7 @@ local function addEventLog(eventName, args, source)
         event = eventName,
         args = args,
         source = source or "Unknown",
-        formattedTime = os.date("%H:%M:%S", timestamp)
+        formattedTime = math.floor(timestamp) -- Use tick instead of os.date
     }
     
     table.insert(eventLogs, logEntry)
@@ -193,9 +193,9 @@ end
 
 -- Function untuk save logs to file
 local function saveLogsToFile()
-    local fileName = "RemoteEventSpy_" .. os.date("%Y%m%d_%H%M%S") .. ".txt"
+    local fileName = "RemoteEventSpy.txt" -- Simple filename
     local content = "=== REMOTE EVENT SPY LOG ===\n"
-    content = content .. "Generated: " .. os.date("%Y-%m-%d %H:%M:%S") .. "\n"
+    content = content .. "Generated at tick: " .. tick() .. "\n"
     content = content .. "Player: " .. player.Name .. "\n"
     content = content .. "Total Events Captured: " .. #eventLogs .. "\n\n"
     
