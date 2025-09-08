@@ -17,6 +17,77 @@ local logData = {}
 local maxLogEntries = 1000
 local debugUI = nil
 
+-- Function untuk save log to file
+local function saveLogToFile()
+    local success, err = pcall(function()
+        local fileName = "ReelDebugLog.txt" -- Nama file sederhana
+        local content = "=== REEL DEBUGGER LOG ===\n"
+        content = content .. "Generated at tick: " .. tick() .. "\n"
+        content = content .. "Player: " .. player.Name .. "\n"
+        content = content .. "Total Entries: " .. #logData .. "\n\n"
+        content = content .. table.concat(logData, "\n")
+        
+        -- Gunakan metode yang sama seperti dump.lua
+        if writefile then
+            writefile(fileName, content)
+            addLog("✅ Log saved to: " .. fileName, "SUCCESS")
+        else
+            -- Alternative: Copy to clipboard if available
+            if setclipboard then
+                setclipboard(content)
+                addLog("📋 Log copied to clipboard (writefile not available)", "INFO")
+            else
+                addLog("❌ No file writing method available", "ERROR")
+            end
+        end
+    end)
+    
+    if not success then
+        addLog("❌ Save failed: " .. tostring(err), "ERROR")
+    end
+end
+
+-- Function untuk clear logs
+local function clearLogs()
+    logData = {}
+    addLog("🗑️ Logs cleared", "INFO")
+end
+
+-- Function untuk analyze current reel
+local function analyzeCurrentReel()
+    local currentReel = playerGui:FindFirstChild("reel")
+    if currentReel then
+        addLog("🔍 Analyzing current reel UI...", "ANALYZE")
+        analyzeReelUI(currentReel)
+    else
+        addLog("❌ No reel UI found for analysis", "ERROR")
+    end
+end
+
+-- Function untuk test reel events
+local function testReelEvents()
+    local events = ReplicatedStorage:FindFirstChild("events")
+    if events then
+        addLog("🧪 Testing reel events...", "TEST")
+        
+        -- Test debug_giveprogress
+        local debugProgress = events:FindFirstChild("debug_giveprogress")
+        if debugProgress then
+            addLog("Testing debug_giveprogress...", "TEST")
+            debugProgress:FireServer(100)
+        end
+        
+        -- Test reelfinished
+        local reelfinished = events:FindFirstChild("reelfinished")
+        if reelfinished then
+            addLog("Testing reelfinished...", "TEST")
+            reelfinished:FireServer(100, true)
+        end
+    else
+        addLog("❌ No events folder found", "ERROR")
+    end
+end
+
 -- Function untuk add log entry
 local function addLog(message, category)
     category = category or "INFO"
@@ -235,77 +306,6 @@ function updateLogDisplay()
     local reelActive = playerGui:FindFirstChild("reel") ~= nil
     statusLabel.Text = "Status: " .. (reelActive and "🎣 REEL ACTIVE" or "⏳ Monitoring...")
     statusLabel.TextColor3 = reelActive and Color3.new(1, 0.8, 0.2) or Color3.new(0.8, 1, 0.8)
-end
-
--- Function untuk save log to file
-local function saveLogToFile()
-    local success, err = pcall(function()
-        local fileName = "ReelDebugLog.txt" -- Nama file sederhana
-        local content = "=== REEL DEBUGGER LOG ===\n"
-        content = content .. "Generated at tick: " .. tick() .. "\n"
-        content = content .. "Player: " .. player.Name .. "\n"
-        content = content .. "Total Entries: " .. #logData .. "\n\n"
-        content = content .. table.concat(logData, "\n")
-        
-        -- Gunakan metode yang sama seperti dump.lua
-        if writefile then
-            writefile(fileName, content)
-            addLog("✅ Log saved to: " .. fileName, "SUCCESS")
-        else
-            -- Alternative: Copy to clipboard if available
-            if setclipboard then
-                setclipboard(content)
-                addLog("📋 Log copied to clipboard (writefile not available)", "INFO")
-            else
-                addLog("❌ No file writing method available", "ERROR")
-            end
-        end
-    end)
-    
-    if not success then
-        addLog("❌ Save failed: " .. tostring(err), "ERROR")
-    end
-end
-
--- Function untuk clear logs
-local function clearLogs()
-    logData = {}
-    addLog("🗑️ Logs cleared", "INFO")
-end
-
--- Function untuk analyze current reel
-local function analyzeCurrentReel()
-    local currentReel = playerGui:FindFirstChild("reel")
-    if currentReel then
-        addLog("🔍 Analyzing current reel UI...", "ANALYZE")
-        analyzeReelUI(currentReel)
-    else
-        addLog("❌ No reel UI found for analysis", "ERROR")
-    end
-end
-
--- Function untuk test reel events
-local function testReelEvents()
-    local events = ReplicatedStorage:FindFirstChild("events")
-    if events then
-        addLog("🧪 Testing reel events...", "TEST")
-        
-        -- Test debug_giveprogress
-        local debugProgress = events:FindFirstChild("debug_giveprogress")
-        if debugProgress then
-            addLog("Testing debug_giveprogress...", "TEST")
-            debugProgress:FireServer(100)
-        end
-        
-        -- Test reelfinished
-        local reelfinished = events:FindFirstChild("reelfinished")
-        if reelfinished then
-            addLog("Testing reelfinished...", "TEST")
-            reelfinished:FireServer(100, true)
-        end
-    else
-        addLog("❌ No events folder found", "ERROR")
-    end
 end
 
 -- Function untuk monitor child added/removed
