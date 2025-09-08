@@ -323,13 +323,13 @@ function autofarm.stopAutoShake()
     print("Auto Shake stopped")
 end
 
--- Auto Reel dengan 4 mode
+-- Auto Reel dengan 4 mode (Updated berdasarkan debug log)
 function autofarm.startAutoReel(mode)
     autofarm.autoReelEnabled = true
     autofarm.reelMode = mode or 1
     
     if autofarm.reelMode == 1 then
-        -- Mode 1: Faster - langsung perfect seperti sekarang
+        -- Mode 1: Faster - instant completion
         spawn(function()
             while autofarm.autoReelEnabled do
                 local success, err = pcall(function()
@@ -339,14 +339,20 @@ function autofarm.startAutoReel(mode)
                     if reel then
                         local bar = reel:FindFirstChild("bar")
                         if bar and bar.Visible then
-                            -- Faster mode - langsung perfect
-                            local reelEvent = ReplicatedStorage:FindFirstChild("events")
-                            if reelEvent then
-                                local reelAction = reelEvent:FindFirstChild("reelfinished")
-                                if reelAction then
-                                    reelAction:FireServer(100, true) -- Perfect reel
-                                    print("Reel: Faster mode - Perfect!")
+                            -- Faster mode - instant completion
+                            local events = ReplicatedStorage:FindFirstChild("events")
+                            if events then
+                                local debugProgress = events:FindFirstChild("debug_giveprogress")
+                                local reelfinished = events:FindFirstChild("reelfinished")
+                                
+                                if debugProgress then
+                                    debugProgress:FireServer(100)
+                                    print("Reel: Faster mode - Debug progress!")
+                                elseif reelfinished then
+                                    reelfinished:FireServer(100, true)
+                                    print("Reel: Faster mode - Instant finish!")
                                 end
+                                wait(1) -- Delay to avoid spam
                             end
                         end
                     end
@@ -361,7 +367,7 @@ function autofarm.startAutoReel(mode)
         end)
         
     elseif autofarm.reelMode == 2 then
-        -- Mode 2: Normal - buat bar putih jadi full (menggunakan event khusus)
+        -- Mode 2: Normal - maintain fish position to fill progress
         spawn(function()
             while autofarm.autoReelEnabled do
                 local success, err = pcall(function()
@@ -371,13 +377,37 @@ function autofarm.startAutoReel(mode)
                     if reel then
                         local bar = reel:FindFirstChild("bar")
                         if bar and bar.Visible then
-                            -- Normal mode - coba gunakan debug_giveprogress atau reelfinished dengan parameter khusus
-                            local reelEvent = ReplicatedStorage:FindFirstChild("events")
-                            if reelEvent then
-                                -- Coba beberapa method untuk fill bar
-                                local debugProgress = reelEvent:FindFirstChild("debug_giveprogress")
-                                if debugProgress then
-                                    debugProgress:FireServer(100) -- Fill progress to 100%
+                            local fish = bar:FindFirstChild("fish")
+                            local playerbar = bar:FindFirstChild("playerbar")
+                            local progress = bar:FindFirstChild("progress")
+                            
+                            if fish and playerbar and progress then
+                                local progressBar = progress:FindFirstChild("bar")
+                                
+                                -- Get fish and player positions
+                                local fishPos = fish.Position.X.Scale
+                                local playerPos = playerbar.Position.X.Scale
+                                
+                                -- Maintain position by clicking when fish moves away
+                                if math.abs(fishPos - 0.5) > 0.15 then
+                                    -- Click and hold to keep fish centered
+                                    VirtualInputManager:SendMouseButtonEvent(100, 100, Enum.UserInputType.MouseButton1, true, game, 0)
+                                    wait(0.1)
+                                    VirtualInputManager:SendMouseButtonEvent(100, 100, Enum.UserInputType.MouseButton1, false, game, 0)
+                                    print("Reel: Normal mode - Centering fish")
+                                end
+                            end
+                        end
+                    end
+                end)
+                
+                if not success then
+                    warn("Auto Reel Normal Error: " .. tostring(err))
+                end
+                
+                wait(0.05)
+            end
+        end)
                                     print("Reel: Normal mode - Progress filled!")
                                 else
                                     -- Alternative: FireServer reelfinished dengan parameter yang berbeda
@@ -402,7 +432,7 @@ function autofarm.startAutoReel(mode)
         end)
         
     elseif autofarm.reelMode == 3 then
-        -- Mode 3: Legit - mengikuti garis hitam dengan tap logic
+        -- Mode 3: Legit - follow fish with direction indicators
         spawn(function()
             while autofarm.autoReelEnabled do
                 local success, err = pcall(function()
@@ -412,34 +442,53 @@ function autofarm.startAutoReel(mode)
                     if reel then
                         local bar = reel:FindFirstChild("bar")
                         if bar and bar.Visible then
-                            -- Legit mode - monitor posisi dan tap sesuai kebutuhan
-                            local pointer = reel:FindFirstChild("pointer") -- Garis hitam
-                            local playerbar = reel:FindFirstChild("playerbar") -- Bar putih yang bisa digerakkan
+                            local fish = bar:FindFirstChild("fish")
+                            local playerbar = bar:FindFirstChild("playerbar")
+                            local leftIcon = bar:FindFirstChild("licon")
+                            local rightIcon = bar:FindFirstChild("ricon")
                             
-                            if pointer and playerbar then
+                            if fish and playerbar then
                                 -- Get positions
-                                local pointerPos = pointer.Position.X.Scale or 0.5
-                                local playerBarPos = playerbar.Position.X.Scale or 0.5
+                                local fishPos = fish.Position.X.Scale
+                                local playerPos = playerbar.Position.X.Scale
                                 
-                                -- Logic: Tap jika bar putih di sebelah kiri garis hitam
-                                if playerBarPos < pointerPos then
-                                    -- Bar putih di kiri garis hitam - TAP untuk geser ke kanan
-                                    UserInputService:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-                                    wait(0.02)
-                                    UserInputService:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
-                                    print("Reel: Legit mode - Tap right")
+                                -- Check direction indicators first
+                                if leftIcon and leftIcon.Visible then
+                                    -- Move left
+                                    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.A, false, game)
                                     wait(0.05)
+                                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.A, false, game)
+                                    print("Reel: Legit mode - Move left")
+                                elseif rightIcon and rightIcon.Visible then
+                                    -- Move right
+                                    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.D, false, game)
+                                    wait(0.05)
+                                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.D, false, game)
+                                    print("Reel: Legit mode - Move right")
                                 else
-                                    -- Bar putih di kanan garis hitam - TIDAK TAP (biarkan geser ke kiri)
-                                    print("Reel: Legit mode - Let drift left")
-                                    wait(0.02)
+                                    -- Follow fish position with realistic movement
+                                    local distance = fishPos - playerPos
+                                    
+                                    if math.abs(distance) > 0.05 then
+                                        if distance > 0 then
+                                            -- Fish is to the right, tap to move right
+                                            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+                                            wait(0.02)
+                                            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+                                            print("Reel: Legit mode - Tap right")
+                                        else
+                                            -- Fish is to the left, let it drift or tap lightly
+                                            print("Reel: Legit mode - Let drift left")
+                                        end
+                                        wait(0.08) -- Realistic delay
+                                    end
                                 end
                             else
-                                -- Fallback jika struktur UI berbeda
-                                UserInputService:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-                                wait(0.02)
-                                UserInputService:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+                                -- Fallback - simple tap pattern
+                                VirtualInputManager:SendMouseButtonEvent(100, 100, Enum.UserInputType.MouseButton1, true, game, 0)
                                 wait(0.1)
+                                VirtualInputManager:SendMouseButtonEvent(100, 100, Enum.UserInputType.MouseButton1, false, game, 0)
+                                wait(0.2)
                             end
                         end
                     end
