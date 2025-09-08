@@ -30,7 +30,8 @@ local PlayerGUI = LocalPlayer:WaitForChild("PlayerGui")
 local Config = {
     General = {
         mode = "Safe", -- "Safe", "Normal", "Risky"
-        randomization = true
+        randomization = true,
+        debugMode = false -- Enable untuk melihat GUI structure
     },
     AutoShake = {
         enabled = false,
@@ -208,6 +209,27 @@ local function setupAutoReel()
     
     connections.autoReel = PlayerGUI.ChildAdded:Connect(function(GUI)
         if GUI:IsA("ScreenGui") and GUI.Name == "reel" then
+            -- Debug mode - print GUI structure
+            if Config.General.debugMode then
+                print("=== REEL GUI DEBUG ===")
+                print("GUI Name:", GUI.Name)
+                print("GUI Children:")
+                for _, child in pairs(GUI:GetChildren()) do
+                    print("  -", child.Name, "(" .. child.ClassName .. ")")
+                    if child:GetChildren() then
+                        for _, grandchild in pairs(child:GetChildren()) do
+                            print("    -", grandchild.Name, "(" .. grandchild.ClassName .. ")")
+                            if grandchild.ClassName == "Frame" or grandchild.ClassName == "ImageLabel" then
+                                if grandchild.Size then
+                                    print("      Size:", grandchild.Size)
+                                end
+                            end
+                        end
+                    end
+                end
+                print("=====================")
+            end
+            
             if Config.AutoReel.enabled then
                 local currentDelay = getDelayForFeature("AutoReel")
                 
@@ -220,29 +242,63 @@ local function setupAutoReel()
                     
                 elseif Config.AutoReel.mode == "Perfect" then
                     -- Perfect mode - follow progress bar perfectly
-                    if GUI:FindFirstChild("bar") and GUI.bar:FindFirstChild("playerbar") then
-                        local playerBar = GUI.bar.playerbar
-                        local connection
+                    local foundBar = false
+                    local connection
+                    
+                    -- Try multiple possible bar locations
+                    local function findProgressBar()
+                        -- Common locations for progress bars
+                        local possiblePaths = {
+                            GUI:FindFirstChild("bar"),
+                            GUI:FindFirstChild("Bar"),
+                            GUI:FindFirstChild("progressbar"),
+                            GUI:FindFirstChild("ProgressBar"),
+                            GUI:FindFirstChild("safezone"),
+                        }
                         
+                        for _, parent in pairs(possiblePaths) do
+                            if parent then
+                                local playerbar = parent:FindFirstChild("playerbar") or 
+                                                parent:FindFirstChild("bar") or
+                                                parent:FindFirstChild("progress") or
+                                                parent:FindFirstChild("fill")
+                                if playerbar then
+                                    return playerbar
+                                end
+                            end
+                        end
+                        return nil
+                    end
+                    
+                    local playerBar = findProgressBar()
+                    
+                    if playerBar then
+                        foundBar = true
                         connection = RunService.Heartbeat:Connect(function()
                             if GUI.Parent == nil then
                                 connection:Disconnect()
                                 return
                             end
                             
-                            -- Follow the white progress bar perfectly
-                            if playerBar and playerBar.Size then
-                                local targetSize = playerBar.Size.X.Scale
-                                if targetSize > 0.95 then -- Near completion
-                                    if ReplicatedStorage:WaitForChild("events"):WaitForChild("reelfinished") ~= nil then
-                                        ReplicatedStorage.events.reelfinished:FireServer(100, false)
-                                        connection:Disconnect()
-                                    end
+                            -- Check different possible progress indicators
+                            local progress = 0
+                            if playerBar.Size and playerBar.Size.X.Scale then
+                                progress = playerBar.Size.X.Scale
+                            elseif playerBar:FindFirstChild("Size") then
+                                progress = playerBar.Size.X.Scale or 0
+                            end
+                            
+                            if progress > 0.95 then -- Near completion
+                                if ReplicatedStorage:WaitForChild("events"):WaitForChild("reelfinished") ~= nil then
+                                    ReplicatedStorage.events.reelfinished:FireServer(100, false)
+                                    connection:Disconnect()
                                 end
                             end
                         end)
-                    else
-                        -- Fallback to instant if can't find bars
+                    end
+                    
+                    -- Fallback if no progress bar found
+                    if not foundBar then
                         task.wait(currentDelay)
                         if ReplicatedStorage:WaitForChild("events"):WaitForChild("reelfinished") ~= nil then
                             ReplicatedStorage.events.reelfinished:FireServer(100, false)
@@ -250,47 +306,88 @@ local function setupAutoReel()
                     end
                     
                 elseif Config.AutoReel.mode == "Normal" then
-                    -- Normal mode - wait for progress and complete realistically
-                    if GUI:FindFirstChild("bar") and GUI.bar:FindFirstChild("playerbar") then
-                        local playerBar = GUI.bar.playerbar
-                        local connection
-                        local hasStartedReeling = false
+                    -- Normal mode - wait and complete realistically
+                    local foundBar = false
+                    local connection
+                    local hasStartedReeling = false
+                    local startTime = tick()
+                    
+                    local function findProgressBar()
+                        local possiblePaths = {
+                            GUI:FindFirstChild("bar"),
+                            GUI:FindFirstChild("Bar"),
+                            GUI:FindFirstChild("progressbar"),
+                            GUI:FindFirstChild("ProgressBar"),
+                            GUI:FindFirstChild("safezone"),
+                        }
                         
+                        for _, parent in pairs(possiblePaths) do
+                            if parent then
+                                local playerbar = parent:FindFirstChild("playerbar") or 
+                                                parent:FindFirstChild("bar") or
+                                                parent:FindFirstChild("progress") or
+                                                parent:FindFirstChild("fill")
+                                if playerbar then
+                                    return playerbar
+                                end
+                            end
+                        end
+                        return nil
+                    end
+                    
+                    local playerBar = findProgressBar()
+                    
+                    if playerBar then
+                        foundBar = true
+                        print("Found progress bar:", playerBar.Name)
                         connection = RunService.Heartbeat:Connect(function()
                             if GUI.Parent == nil then
                                 connection:Disconnect()
                                 return
                             end
                             
-                            if playerBar and playerBar.Size then
-                                local currentProgress = playerBar.Size.X.Scale
-                                
-                                -- Start reeling when progress begins
-                                if currentProgress > 0.1 and not hasStartedReeling then
-                                    hasStartedReeling = true
-                                    task.wait(currentDelay)
-                                end
-                                
-                                -- Complete when progress is substantial but not perfect
-                                if hasStartedReeling and currentProgress > 0.7 then
-                                    local randomCompletion = 0.75 + math.random() * 0.2 -- 75-95%
-                                    if currentProgress >= randomCompletion then
-                                        if ReplicatedStorage:WaitForChild("events"):WaitForChild("reelfinished") ~= nil then
-                                            ReplicatedStorage.events.reelfinished:FireServer(100, false)
-                                            connection:Disconnect()
-                                        end
+                            local progress = 0
+                            if playerBar.Size and playerBar.Size.X.Scale then
+                                progress = playerBar.Size.X.Scale
+                            end
+                            
+                            -- Debug progress
+                            if Config.General.debugMode then
+                                print("Progress:", progress)
+                            end
+                            
+                            -- Start reeling when progress begins or after a delay
+                            if (progress > 0.1 or tick() - startTime > 1) and not hasStartedReeling then
+                                hasStartedReeling = true
+                                task.wait(currentDelay)
+                            end
+                            
+                            -- Complete when progress is substantial but not perfect
+                            if hasStartedReeling and (progress > 0.6 or tick() - startTime > 3) then
+                                local randomCompletion = 0.7 + math.random() * 0.25 -- 70-95%
+                                if progress >= randomCompletion or tick() - startTime > 4 then
+                                    if ReplicatedStorage:WaitForChild("events"):WaitForChild("reelfinished") ~= nil then
+                                        ReplicatedStorage.events.reelfinished:FireServer(100, false)
+                                        connection:Disconnect()
+                                        print("Reel completed at progress:", progress)
                                     end
                                 end
                             end
                         end)
                     else
-                        -- Fallback method
-                        repeat 
-                            task.wait(currentDelay) 
-                            if ReplicatedStorage:WaitForChild("events"):WaitForChild("reelfinished") ~= nil then
+                        print("No progress bar found, using fallback method")
+                    end
+                    
+                    -- Improved fallback method with timing
+                    if not foundBar then
+                        spawn(function()
+                            local waitTime = currentDelay + math.random() * 2 -- 2-5 seconds random
+                            task.wait(waitTime)
+                            if GUI.Parent ~= nil and ReplicatedStorage:WaitForChild("events"):WaitForChild("reelfinished") ~= nil then
                                 ReplicatedStorage.events.reelfinished:FireServer(100, false)
+                                print("Fallback reel completed after", waitTime, "seconds")
                             end
-                        until GUI == nil
+                        end)
                     end
                 end
             end
@@ -367,6 +464,19 @@ local RandomizationToggle = Tabs.Main:AddToggle("Randomization", {
     Callback = function(Value)
         Config.General.randomization = Value
         print("Delay Randomization:", Value and "Enabled" or "Disabled")
+    end
+})
+
+local DebugToggle = Tabs.Main:AddToggle("DebugMode", {
+    Title = "Debug Mode",
+    Description = "Enable to see reel GUI structure in console",
+    Default = Config.General.debugMode,
+    Callback = function(Value)
+        Config.General.debugMode = Value
+        print("Debug Mode:", Value and "Enabled" or "Disabled")
+        if Value then
+            print("Debug mode enabled - reel GUI structure will be printed to console when fishing")
+        end
     end
 })
 
@@ -485,8 +595,8 @@ local AutoCastDelay = Tabs.Main:AddSlider("AutoCastDelay", {
 Tabs.Settings:AddSection("Information")
 
 Tabs.Settings:AddParagraph({
-    Title = "SUPER HUB v1.2",
-    Content = "A modular fishing script with multiple safety modes and advanced reel system.\n\n🟢 Safe Mode: Maximum safety, human-like delays\n🟡 Normal Mode: Balanced performance\n🟠 Risky Mode: Faster but riskier\n🔴 Rage Mode: Maximum speed, HIGH RISK!\n\n🎣 Reel Modes:\n• Normal: Realistic progress following\n• Perfect: Follows progress bar perfectly\n• Instant: Immediate completion"
+    Title = "SUPER HUB v1.3",
+    Content = "A modular fishing script with multiple safety modes and improved reel system.\n\n🟢 Safe Mode: Maximum safety, human-like delays\n🟡 Normal Mode: Balanced performance\n🟠 Risky Mode: Faster but riskier\n🔴 Rage Mode: Maximum speed, HIGH RISK!\n\n🎣 Reel Modes:\n• Normal: Realistic progress following with fallback\n• Perfect: Follows progress bar perfectly\n• Instant: Immediate completion\n\n🔧 Debug Mode: Enable to see GUI structure"
 })
 
 Tabs.Settings:AddSection("Current Mode Info")
@@ -567,8 +677,8 @@ initializeConnections()
 
 -- Welcome notification
 Fluent:Notify({
-    Title = "SUPER HUB v1.2",
-    Content = "Successfully loaded with " .. Config.General.mode .. " mode! Advanced reel system enabled.",
+    Title = "SUPER HUB v1.3",
+    Content = "Successfully loaded with " .. Config.General.mode .. " mode! Improved reel system with debug mode.",
     Duration = 5
 })
 
