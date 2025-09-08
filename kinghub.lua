@@ -1,15 +1,13 @@
--- KingHub with Fluent UI
--- Based on original kinghub.lua, modified to use fluent.lua for UI
+-- Made by kylosilly and netpa :3 (space hub pls dont skid thanks thier hwid and keys list: https://pastebin.com/vCwfFmP0)
 
--- Load Fluent UI from local fluent.lua
-local Fluent = loadstring(readfile("fluent.lua"))()
+local repo = 'https://raw.githubusercontent.com/KINGHUB01/Gui/main/'
 
-local Library = Fluent.Library
-local ThemeManager = Fluent.ThemeManager
-local SaveManager = Fluent.SaveManager
+local Library = loadstring(game:HttpGet(repo ..'Gui%20Lib%20%5BLibrary%5D'))()
+local ThemeManager = loadstring(game:HttpGet(repo ..'Gui%20Lib%20%5BThemeManager%5D'))()
+local SaveManager = loadstring(game:HttpGet(repo ..'Gui%20Lib%20%5BSaveManager%5D'))()
 
 local Window = Library:CreateWindow({
-    Title = 'Fisch V1.2.3 (BETA) - Fluent UI',
+    Title = 'Fisch V1.2.3 (BETA)',
     Center = true,
     AutoShow = true,
     TabPadding = 8,
@@ -29,7 +27,7 @@ local WatermarkConnection = game:GetService('RunService').RenderStepped:Connect(
         FrameCounter = 0;
     end;
 
-    Library:SetWatermark(('KingHub Fluent V1.2.3 | %s fps | %s ms'):format(
+    Library:SetWatermark(('Rinns Hub V1.2.3 | %s fps | %s ms'):format(
         math.floor(FPS),
         math.floor(game:GetService('Stats').Network.ServerStatsItem['Data Ping']:GetValue())
     ));
@@ -92,7 +90,7 @@ local Debug = function()
     print(debug.info(2, "l"))
 end
 
--- Variables
+-- Varbiables
 
 local autoShake = false
 local autoShakeDelay = 0.1
@@ -112,7 +110,7 @@ local CollarPlayer = false
 local Target
 local FreezeChar = false
 
--- Connections
+-- Rest
 
 autoreelandshakeConnection = PlayerGUI.ChildAdded:Connect(function(GUI)
     if GUI:IsA("ScreenGui") and GUI.Name == "shakeui" then
@@ -127,6 +125,8 @@ autoreelandshakeConnection = PlayerGUI.ChildAdded:Connect(function(GUI)
                                 local size = child.AbsoluteSize
                                 VirtualInputManager:SendMouseButtonEvent(pos.X + size.X / 2, pos.Y + size.Y / 2, 0, true, LocalPlayer, 0)
                                 VirtualInputManager:SendMouseButtonEvent(pos.X + size.X / 2, pos.Y + size.Y / 2, 0, false, LocalPlayer, 0)
+                            --[[elseif autoShakeMethod == "firesignal" then
+                                firesignal(child.MouseButton1Click)]]
                             elseif autoShakeMethod == "KeyCodeEvent" then
                                 while WaitForSomeone(RenderStepped) do
                                     if autoShake and GUI.safezone:FindFirstChild(child.Name) ~= nil then
@@ -304,12 +304,13 @@ NpcFolder.ChildAdded:Connect(function(child)
     end
 end)
 
--- Main Tab
+-- Main
 
 local AutoShakeGroup = Tabs.Main:AddLeftGroupbox('AutoShake')
 local AutoReelGroup = Tabs.Main:AddLeftGroupbox('AutoReel')
 local AutoCastGroup = Tabs.Main:AddLeftGroupbox('AutoCast')
 local FishUtilitiesGroup = Tabs.Main:AddRightGroupbox('Fish (🐟) Utilities')
+--local EventGroup = Tabs.Main:AddRightGroupbox('Event')
 local ZoneCastGroup = Tabs.Main:AddRightGroupbox('ZoneCast')
 local CollarPlayerGroup = Tabs.Main:AddRightGroupbox('CollarPlayer')
 
@@ -327,11 +328,21 @@ local AutoShakeSettings = AutoShakeGroup:AddDependencyBox()
 AutoShakeSettings:AddDropdown('AutoShakeMode', {
     Text = 'Auto Shake Method',
     Tooltip = 'Method to click on the shake button',
-    Values = {'ClickEvent', 'KeyCodeEvent' },
+    Values = {'ClickEvent', --[['firesignal',]] 'KeyCodeEvent' },
     Default = autoShakeMethod,
+  
     Callback = function(Value)
         autoShakeMethod = Value
     end
+})
+
+local AutoShakeKeyCodeEventText = AutoShakeSettings:AddDependencyBox()
+
+AutoShakeKeyCodeEventText:AddLabel('Inspired from rblxscripts.net!')
+AutoShakeKeyCodeEventText:AddLabel('Huge shoutout to them.')
+
+AutoShakeKeyCodeEventText:SetupDependencies({
+    { Options.AutoShakeMode, "KeyCodeEvent" }
 })
 
 AutoShakeSettings:AddSlider('AutoShakeDelay', {
@@ -340,6 +351,7 @@ AutoShakeSettings:AddSlider('AutoShakeDelay', {
     Min = 0,
     Max = 10,
     Rounding = 1,
+
     Callback = function(Value)
         autoShakeDelay = Value
     end
@@ -348,6 +360,38 @@ AutoShakeSettings:AddSlider('AutoShakeDelay', {
 AutoShakeSettings:SetupDependencies({
     { Toggles.AutoShake, true }
 })
+
+--[[
+local AutoShakeXYOffset = AutoShakeGroup:AddDependencyBox()
+
+AutoShakeXYOffset:AddSlider('AutoShakeXOffset', {
+    Text = 'AutoShake X Offset',
+    Default = 0,
+    Min = -10,
+    Max = 10,
+    Rounding = 1,
+
+    Callback = function(Value)
+        autoShakeClickOffsetX = Value
+    end
+})
+
+AutoShakeXYOffset:AddSlider('AutoShakeXOffset', {
+    Text = 'AutoShake Y Offset',
+    Default = 0,
+    Min = -10,
+    Max = 10,
+    Rounding = 1,
+
+    Callback = function(Value)
+        autoShakeClickOffsetY = Value
+    end
+})
+
+AutoShakeXYOffset:SetupDependencies({
+    { Options.AutoShakeMode, "ClickEvent" }
+})
+]]
 
 AutoReelGroup:AddToggle('AutoReel', {
     Text = 'Enabled',
@@ -366,6 +410,7 @@ AutoReelSettings:AddSlider('AutoReelDelay', {
     Min = 0,
     Max = 10,
     Rounding = 1,
+
     Callback = function(Value)
         autoReelDelay = Value
     end
@@ -412,6 +457,7 @@ AutoCastSettings:AddSlider('AutoCastDelay', {
     Min = 0,
     Max = 10,
     Rounding = 1,
+
     Callback = function(Value)
         autoCastDelay = Value
     end
@@ -422,6 +468,7 @@ AutoCastSettings:AddDropdown('AutoCastMode', {
     Tooltip = 'Change the mode of the AutoCast',
     Values = {'Legit', 'Rage'},
     Default = autoCastMode,
+  
     Callback = function(Value)
         autoCastMode = Value
     end
@@ -431,7 +478,7 @@ AutoCastSettings:SetupDependencies({
     { Toggles.AutoCast, true }
 })
 
-FishUtilitiesGroup:AddButton({
+local SellButton = FishUtilitiesGroup:AddButton({
     Text = 'Sell a fish',
     Func = function()
         Workspace:WaitForChild("world"):WaitForChild("npcs"):WaitForChild("Marc Merchant"):WaitForChild("merchant"):WaitForChild("sell"):InvokeServer()
@@ -440,7 +487,7 @@ FishUtilitiesGroup:AddButton({
     Tooltip = 'Sells the fish you are holding'
 })
 
-FishUtilitiesGroup:AddButton({
+local SellAllButton = FishUtilitiesGroup:AddButton({
     Text = 'Sell ALL fish',
     Func = function()
         Workspace:WaitForChild("world"):WaitForChild("npcs"):WaitForChild("Marc Merchant"):WaitForChild("merchant"):WaitForChild("sellall"):InvokeServer()
@@ -449,7 +496,7 @@ FishUtilitiesGroup:AddButton({
     Tooltip = 'Sells all your fish'
 })
 
-FishUtilitiesGroup:AddButton({
+local SellAllButton = FishUtilitiesGroup:AddButton({
     Text = 'Appraise fish 🐟 (450C$)',
     Func = function()
         Workspace:WaitForChild("world"):WaitForChild("npcs"):WaitForChild("Appraiser"):WaitForChild("appraiser"):WaitForChild("appraise"):InvokeServer()
@@ -457,6 +504,43 @@ FishUtilitiesGroup:AddButton({
     DoubleClick = false,
     Tooltip = 'Appraises the fish you are holding'
 })
+
+--[[
+EventGroup:AddDropdown('Event', {
+    Text = 'Item Grabber',
+    Tooltip = 'Grabs the Event Item',
+    Values = {'Gaint Mushroom', 'Spiders Eye', 'Strange Root', 'Candy Corn', 'Dark Art Skull'},
+    Default = '',
+  
+    Callback = function(Value)
+        if HumanoidRootPart ~= nil and ActiveFolder ~= nil then
+            local oldpos = HumanoidRootPart.CFrame
+            local EventItem = ActiveFolder:FindFirstChild(Value)
+
+            if EventItem ~= nil and EventItem:FindFirstChild("PickupPrompt") ~= nil then
+                HumanoidRootPart.CFrame = EventItem:FindFirstChildOfClass("MeshPart").CFrame + Vector3.new(3, 2, 0)
+                Noclip = true
+                task.wait(0.05)
+                HumanoidRootPart.Anchored = true
+                task.wait(0.5)
+                fireproximityprompt(EventItem.PickupPrompt)
+                task.wait(1)
+                if Toggles.Noclip.Value == false then
+                    Noclip = false
+                else
+                    Noclip = true
+                end
+                HumanoidRootPart.Anchored = false
+                HumanoidRootPart.CFrame = oldpos
+            else
+                Library:Notify(string.format('There is no "%s" in workspace', Value))
+            end
+        end
+    end
+})
+
+EventGroup:AddLabel("Might be buggy!")
+]]
 
 ZoneCastGroup:AddToggle('ZoneCast', {
     Text = 'Enabled',
@@ -474,6 +558,7 @@ ZoneCastDropdowns:AddDropdown('ZoneCastValue', {
     Tooltip = nil,
     Values = fisktable,
     Default = Zone,
+  
     Callback = function(Value)
         Zone = Value
     end
@@ -498,6 +583,7 @@ CollarPlayerDropdown:AddDropdown('CollarTarget', {
     SpecialType = 'Player',
     Text = 'Player',
     Tooltip = 'Select the player you will collar',
+  
     Callback = function(Value)
         Target = Value
     end
@@ -507,7 +593,7 @@ CollarPlayerDropdown:SetupDependencies({
     { Toggles.CollarPlayer, true }
 })
 
--- Teleports Tab
+-- Teleports
 
 local TeleportsGroup = Tabs.Teleports:AddLeftGroupbox('Teleports')
 
@@ -516,6 +602,7 @@ TeleportsGroup:AddDropdown('PlaceTeleport', {
     Tooltip = 'Teleport to a place',
     Values = teleportSpots,
     Default = '',
+  
     Callback = function(Value)
         if teleportSpots ~= nil and HumanoidRootPart ~= nil then
             HumanoidRootPart.CFrame = TpSpotsFolder:FindFirstChild(Value).CFrame + Vector3.new(0, 5, 0)
@@ -528,6 +615,7 @@ TeleportsGroup:AddDropdown('NPCTeleport', {
     Tooltip = 'Teleport to a rod',
     Values = racistPeople,
     Default = '',
+  
     Callback = function(Value)
         if racistPeople ~= nil and HumanoidRootPart ~= nil then
             HumanoidRootPart.CFrame = NpcFolder:FindFirstChild(Value):WaitForChild("HumanoidRootPart").CFrame + Vector3.new(0, 1, 0)
@@ -540,6 +628,7 @@ TeleportsGroup:AddDropdown('ItemTeleport', {
     Tooltip = 'Teleport to a rod',
     Values = {"Bait_Crate", "Carbon_Rod", "Crab_Cage", "Fast_Rod", "Flimsy_Rod", "GPS", "Long_Rod", "Lucky_Rod", "Plastic_Rod", "Training_Rod"},
     Default = '',
+  
     Callback = function(Value)
         if itemSpots ~= nil and HumanoidRootPart ~= nil then
             HumanoidRootPart.CFrame = itemSpots[Value]
@@ -549,7 +638,7 @@ TeleportsGroup:AddDropdown('ItemTeleport', {
 
 local TeleportToSafeZoneGroup = Tabs.Teleports:AddRightGroupbox('Safe Zone')
 
-TeleportToSafeZoneGroup:AddButton({
+local TeleportToSafeZoneButton = TeleportToSafeZoneGroup:AddButton({
     Text = 'Teleport to safe zone',
     Func = function()
         HumanoidRootPart.CFrame = SafeZone.CFrame + Vector3.new(0, 2, 0)
@@ -558,7 +647,7 @@ TeleportToSafeZoneGroup:AddButton({
     Tooltip = 'Teleports you to a safe zone'
 })
 
--- LocalPlayer Tab
+-- LocalPlayer
 
 local LocalPlayerGroup = Tabs.LocalPlayer:AddLeftGroupbox('LocalPlayer')
 
@@ -596,10 +685,11 @@ LocalPlayerGroup:AddToggle('AntiDrown', {
 
 local ResetRodGroup = Tabs.LocalPlayer:AddRightGroupbox('Reset')
 
-ResetRodGroup:AddButton({
+local ResetRodButton = ResetRodGroup:AddButton({
     Text = 'Reset rod',
     Func = function()
         local tool = LocalCharacter:FindFirstChildOfClass("Tool")
+
         if tool:FindFirstChild("events"):WaitForChild("reset") ~= nil then
             tool.events.reset:FireServer()
         end
@@ -610,7 +700,7 @@ ResetRodGroup:AddButton({
 
 local AntiAfkGroup = Tabs.LocalPlayer:AddRightGroupbox('AntiAFK')
 
-AntiAfkGroup:AddButton({
+local AntiAFKButton = AntiAfkGroup:AddButton({
     Text = 'Anti-AFK',
     Func = function()
         Library:Notify("Anti-AFK is now running!")
@@ -644,15 +734,15 @@ FreezeCharacterGroup:AddToggle('FreezeCharacter', {
     end
 })
 
--- Settings Tab
+-- Settings
 
 local SettingsGroup = Tabs.Settings:AddLeftGroupbox('Settings')
 local CreditsGroup = Tabs.Settings:AddRightGroupbox('Credits')
 
 CreditsGroup:AddLabel('Made by kylosilly and netpa!')
-CreditsGroup:AddLabel('Modified to use Fluent UI')
+CreditsGroup:AddLabel('Made with love and hate :3')
 
-CreditsGroup:AddButton({
+local DiscordButton = CreditsGroup:AddButton({
     Text = 'Copy Fisch Discord Link',
     Func = function()
         setclipboard('https://discord.gg/DEkfE99JFh')
@@ -661,7 +751,7 @@ CreditsGroup:AddButton({
     Tooltip = 'Join our fisch discord!'
 })
 
-CreditsGroup:AddButton({
+local DiscordButton2 = CreditsGroup:AddButton({
     Text = 'Copy Main Discord link',
     Func = function()
         setclipboard('https://discord.gg/VudXCDCaBN')
@@ -715,13 +805,21 @@ SettingsGroup:AddLabel('Menu bind'):AddKeyPicker('MenuKeybind', { Default = 'End
 Library.ToggleKeybind = Options.MenuKeybind
 
 ThemeManager:SetLibrary(Library)
+
 SaveManager:SetLibrary(Library)
+
 SaveManager:IgnoreThemeSettings()
+
 SaveManager:SetIgnoreIndexes({ 'MenuKeybind' })
-ThemeManager:SetFolder('KingHubFluent')
-SaveManager:SetFolder('KingHubFluent/Fisch')
+
+ThemeManager:SetFolder('RinnsHub')
+
+SaveManager:SetFolder('RinnsHub/Fisch')
+
 SaveManager:BuildConfigSection(Tabs.Settings)
+
 ThemeManager:ApplyToTab(Tabs.Settings)
+
 SaveManager:LoadAutoloadConfig()
 
 local Version = "1.2.3"
