@@ -8,8 +8,14 @@ Notes:
  - Further polishing (icons, key system) can be added per your preference.
 ]]
 
---// Load Reyfield
-local Reyfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/peyton2465/Reyfield/main/source'))()
+--// Load local fluent (Reyfield stub replacement because remote link 404)
+local Reyfield = loadfile and loadfile('fluent.lua')() or do
+    -- Fallback if loadfile not permitted in executor: attempt require via getgenv cache
+    local ok, mod = pcall(function()
+        return loadstring(readfile and readfile('fluent.lua') or '')()
+    end)
+    if ok and mod then return mod else error('Failed to load local fluent.lua stub') end
+end
 
 local Window = Reyfield:CreateWindow({
     Name = "Fisch V1.2.3 (BETA) - Reyfield",
