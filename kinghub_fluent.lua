@@ -1,20 +1,84 @@
--- Ported full kinghub functionality to local fluent stub (offline)
+-- Self-contained fluent stub (inlined to avoid second HTTP request / require issues)
+local Options, Toggles = {}, {}
+getgenv = getgenv or function() return _G end
+local env = getgenv()
+env.Options = env.Options or Options
+env.Toggles = env.Toggles or Toggles
 
--- Load local fluent stub via HTTP (since require() expects ModuleScript instance in Roblox)
-local function _loadFluent()
-    local url = 'https://raw.githubusercontent.com/donitono/SUPER/main/fluent.lua'
-    local src = game:HttpGet(url)
-    local ret = loadstring(src)()
-    if type(ret) ~= 'table' or not ret.Library then
-        error('Unexpected fluent.lua return value')
+local Library = { _watermark = '', _unloadCbs = {}, Unloaded = false }
+
+local function makeGroupBox(name)
+    local gb = { Name = name }
+    function gb:AddLabel(text)
+        local label = { Text = text }
+        function label:AddKeyPicker(key, data)
+            Options[key] = { Value = data.Default, Raw = data }
+            function Options[key]:SetValue(v) self.Value = v if self.Callback then pcall(self.Callback,v) end end
+            return Options[key]
+        end
+        return label
     end
-    return ret
+    function gb:AddButton(cfg)
+        if type(cfg) == 'string' then cfg = { Text = cfg, Func = function() end } end
+        return cfg
+    end
+    function gb:AddToggle(key, data)
+        Toggles[key] = { Value = data.Default, Callback = data.Callback }
+        function Toggles[key]:SetValue(v) self.Value=v if self.Callback then pcall(self.Callback,v) end end
+        return Toggles[key]
+    end
+    function gb:AddSlider(key, data)
+        Options[key] = { Value = data.Default, Min=data.Min, Max=data.Max, Callback=data.Callback }
+        function Options[key]:SetValue(v) self.Value=v if self.Callback then pcall(self.Callback,v) end end
+        return Options[key]
+    end
+    function gb:AddDropdown(key, data)
+        Options[key] = { Value=data.Default, Values=data.Values, Callback=data.Callback, SpecialType=data.SpecialType }
+        function Options[key]:SetValue(v) self.Value=v if self.Callback then pcall(self.Callback,v) end end
+        return Options[key]
+    end
+    function gb:AddDependencyBox()
+        local box = { _rules = {} }
+        function box:SetupDependencies(rules) self._rules = rules end
+        function box:AddDropdown(...) return gb:AddDropdown(...) end
+        function box:AddSlider(...) return gb:AddSlider(...) end
+        function box:AddToggle(...) return gb:AddToggle(...) end
+        function box:AddLabel(...) return gb:AddLabel(...) end
+        return box
+    end
+    return gb
 end
-local ok, Fluent = pcall(_loadFluent)
-if not ok then error('Failed to load fluent.lua stub: ' .. tostring(Fluent)) end
 
-local Library, ThemeManager, SaveManager = Fluent.Library, Fluent.ThemeManager, Fluent.SaveManager
-local Options, Toggles = Fluent.Options, Fluent.Toggles
+local function makeTab(name)
+    local tab = { Name=name, Left={}, Right={} }
+    function tab:AddLeftGroupbox(n) local g=makeGroupBox(n) table.insert(self.Left,g) return g end
+    function tab:AddRightGroupbox(n) local g=makeGroupBox(n) table.insert(self.Right,g) return g end
+    return tab
+end
+
+function Library:CreateWindow(cfg)
+    local win = { Title = cfg.Title, Tabs = {} }
+    function win:AddTab(name)
+        local t = makeTab(name)
+        self.Tabs[name]=t
+        return t
+    end
+    return win
+end
+function Library:SetWatermark(t) self._watermark=t end
+function Library:Notify(msg) print('[Fluent Notify] '.. tostring(msg)) end
+function Library:OnUnload(cb) table.insert(self._unloadCbs, cb) end
+function Library:Unload()
+    if self.Unloaded then return end
+    for _,cb in ipairs(self._unloadCbs) do pcall(cb) end
+    self.Unloaded=true
+end
+
+local ThemeManager = { SetLibrary=function()end, SetFolder=function()end, ApplyToTab=function()end }
+local SaveManager = { SetLibrary=function()end, IgnoreThemeSettings=function()end, SetIgnoreIndexes=function()end, SetFolder=function()end, BuildConfigSection=function()end, LoadAutoloadConfig=function()end }
+
+-- Expose keybind placeholder
+Library.ToggleKeybind = nil
 
 local Window = Library:CreateWindow({
     Title = 'Fisch V1.2.3 (FLUENT)',
