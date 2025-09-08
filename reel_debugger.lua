@@ -196,21 +196,42 @@ local function createDebugUI()
     testButton.BorderSizePixel = 0
     testButton.Parent = buttonFrame
     
-    -- Button connections
+    -- Button connections with error protection
     saveButton.MouseButton1Click:Connect(function()
-        saveLogToFile()
+        local success, err = pcall(function()
+            saveLogToFile()
+        end)
+        if not success then
+            addLog("❌ Save button error: " .. tostring(err), "ERROR")
+            print("Save error:", err)
+        end
     end)
     
     clearButton.MouseButton1Click:Connect(function()
-        clearLogs()
+        local success, err = pcall(function()
+            clearLogs()
+        end)
+        if not success then
+            addLog("❌ Clear button error: " .. tostring(err), "ERROR")
+        end
     end)
     
     analyzeButton.MouseButton1Click:Connect(function()
-        analyzeCurrentReel()
+        local success, err = pcall(function()
+            analyzeCurrentReel()
+        end)
+        if not success then
+            addLog("❌ Analyze button error: " .. tostring(err), "ERROR")
+        end
     end)
     
     testButton.MouseButton1Click:Connect(function()
-        testReelEvents()
+        local success, err = pcall(function()
+            testReelEvents()
+        end)
+        if not success then
+            addLog("❌ Test button error: " .. tostring(err), "ERROR")
+        end
     end)
     
     return mainFrame.StatusLabel, logFrame.LogText
@@ -239,25 +260,97 @@ end
 
 -- Function untuk save log to file
 local function saveLogToFile()
+    addLog("💾 Starting save operation...", "SYSTEM")
+    
     local success, err = pcall(function()
         local fileName = "ReelDebugLog_" .. os.date("%Y%m%d_%H%M%S") .. ".txt"
         local content = "=== REEL DEBUGGER LOG ===\n"
         content = content .. "Generated: " .. os.date("%Y-%m-%d %H:%M:%S") .. "\n"
-        content = content .. "Player: " .. player.Name .. "\n"
+        content = content .. "Player: " .. (player and player.Name or "Unknown") .. "\n"
         content = content .. "Total Entries: " .. #logData .. "\n\n"
-        content = content .. table.concat(logData, "\n")
+        
+        if #logData > 0 then
+            content = content .. table.concat(logData, "\n")
+        else
+            content = content .. "No log entries found."
+        end
+        
+        addLog("📄 Content prepared (" .. string.len(content) .. " chars)", "INFO")
         
         local saveMethod = "none"
         
-        -- Method 1: Mobile-specific paths (Delta, Arceus X, etc.)
-        local mobilePaths = {
-            fileName, -- Default current directory
-            "workspace/" .. fileName, -- Common mobile path
-            "/storage/emulated/0/Download/" .. fileName, -- Android Download folder
-            "/sdcard/Download/" .. fileName, -- Alternative Android path
-            "/var/mobile/Documents/" .. fileName, -- iOS Documents
-            "Documents/" .. fileName, -- iOS alternative
-        }
+        -- Method 1: Try writefile with multiple paths
+        if writefile then
+            addLog("🔧 Testing writefile paths...", "INFO")
+            local paths = {
+                fileName,
+                "workspace/" .. fileName,
+                "/sdcard/Download/" .. fileName,
+                "/storage/emulated/0/Download/" .. fileName,
+                "Documents/" .. fileName
+            }
+            
+            for i, path in ipairs(paths) do
+                local success2, err2 = pcall(function()
+                    writefile(path, content)
+                end)
+                if success2 then
+                    saveMethod = "file"
+                    addLog("✅ Saved to: " .. path, "SUCCESS")
+                    break
+                else
+                    addLog("❌ Path " .. i .. " failed: " .. tostring(err2), "DEBUG")
+                end
+            end
+        end
+        
+        -- Method 2: Try clipboard if file failed
+        if saveMethod == "none" and setclipboard then
+            addLog("🔧 Trying clipboard...", "INFO")
+            local success3, err3 = pcall(function()
+                setclipboard(content)
+            end)
+            if success3 then
+                saveMethod = "clipboard"
+                addLog("📋 Copied to clipboard! Paste in notes app", "SUCCESS")
+            else
+                addLog("❌ Clipboard failed: " .. tostring(err3), "DEBUG")
+            end
+        end
+        
+        -- Method 3: Manual display as last resort
+        if saveMethod == "none" then
+            addLog("📄 MANUAL COPY:", "MANUAL")
+            addLog("═══════════════════════════════", "MANUAL")
+            local lines = {}
+            for line in content:gmatch("[^\n]+") do
+                table.insert(lines, line)
+            end
+            
+            for i = 1, math.min(10, #lines) do
+                addLog(lines[i], "EXPORT")
+            end
+            
+            if #lines > 10 then
+                addLog("... (" .. (#lines - 10) .. " more lines)", "EXPORT")
+            end
+            addLog("═══════════════════════════════", "MANUAL")
+            saveMethod = "manual"
+        end
+        
+        addLog("💾 Save completed using: " .. saveMethod, "SYSTEM")
+        
+    end)
+    
+    if not success then
+        addLog("❌ Save failed: " .. tostring(err), "ERROR")
+        print("SAVE ERROR DETAILS:", err)
+    end
+end
+        
+        local saveMethod = "none"
+        
+        -- Function untuk clear logs
         
         for _, path in ipairs(mobilePaths) do
             if writefile then
