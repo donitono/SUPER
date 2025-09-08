@@ -9,10 +9,37 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
--- Variables
+-- Variables with safe initialization
 local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
+local character
+local humanoid
+
+-- Safe character and humanoid initialization
+local function initializeCharacter()
+    local success, err = pcall(function()
+        character = player.Character or player.CharacterAdded:Wait()
+        if character then
+            humanoid = character:WaitForChild("Humanoid", 5)
+        end
+    end)
+    
+    if not success then
+        warn("Failed to initialize character: " .. tostring(err))
+        character = nil
+        humanoid = nil
+    end
+    
+    return character ~= nil and humanoid ~= nil
+end
+
+-- Initialize on first load
+initializeCharacter()
+
+-- Reinitialize when character respawns
+player.CharacterAdded:Connect(function()
+    task.wait(1) -- Wait for character to fully load
+    initializeCharacter()
+end)
 
 -- Autofarm States
 autofarm.autoCastEnabled = false
@@ -25,6 +52,13 @@ autofarm.reelMode = 1 -- 1 = faster, 2 = normal, 3 = legit, 4 = fail
 
 -- Auto Cast (dari kinghub dengan metodenya)
 function autofarm.startAutoCast(mode)
+    if not character or not humanoid then
+        if not initializeCharacter() then
+            warn("Cannot start auto cast - character not initialized")
+            return
+        end
+    end
+    
     autofarm.autoCastEnabled = true
     autofarm.castMode = mode or 1
     
@@ -32,20 +66,20 @@ function autofarm.startAutoCast(mode)
     local function onCharacterChildAdded(child)
         if not autofarm.autoCastEnabled then return end
         
-        if child:IsA("Tool") and child:FindFirstChild("events") then
-            local castEvent = child.events:FindFirstChild("cast")
-            if castEvent then
-                task.wait(2) -- Delay sebelum cast
-                
-                local success, err = pcall(function()
+        local success, err = pcall(function()
+            if child:IsA("Tool") and child:FindFirstChild("events") then
+                local castEvent = child.events:FindFirstChild("cast")
+                if castEvent then
+                    task.wait(2) -- Delay sebelum cast
+                    
                     if autofarm.castMode == 1 then
                         -- Mode 1: Legit - simulate mouse click dan tunggu full power
                         local VirtualInputManager = game:GetService("VirtualInputManager")
                         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, player, 0)
                         
                         -- Monitor power bar untuk release saat FULL (seperti kinghub)
-                        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-                        if humanoidRootPart then
+                        if character and character:FindFirstChild("HumanoidRootPart") then
+                            local humanoidRootPart = character.HumanoidRootPart
                             local powerConnection
                             powerConnection = humanoidRootPart.ChildAdded:Connect(function(powerChild)
                                 if powerChild.Name == "power" then
@@ -74,8 +108,8 @@ function autofarm.startAutoCast(mode)
                         local VirtualInputManager = game:GetService("VirtualInputManager")
                         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, player, 0)
                         
-                        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-                        if humanoidRootPart then
+                        if character and character:FindFirstChild("HumanoidRootPart") then
+                            local humanoidRootPart = character.HumanoidRootPart
                             local powerConnection
                             powerConnection = humanoidRootPart.ChildAdded:Connect(function(powerChild)
                                 if powerChild.Name == "power" then
@@ -105,6 +139,10 @@ function autofarm.startAutoCast(mode)
                     warn("Auto Cast Error: " .. tostring(err))
                 end
             end
+        end)
+        
+        if not success then
+            warn("Auto Cast Tool Hook Error: " .. tostring(err))
         end
     end
     
@@ -112,53 +150,54 @@ function autofarm.startAutoCast(mode)
     local function onGuiRemoved(gui)
         if not autofarm.autoCastEnabled then return end
         
-        if gui.Name == "reel" then
-            local tool = character:FindFirstChildOfClass("Tool")
-            if tool and tool:FindFirstChild("events") then
-                local castEvent = tool.events:FindFirstChild("cast")
-                if castEvent then
-                    task.wait(2) -- Delay sebelum recast
-                    
-                    local success, err = pcall(function()
-                        if autofarm.castMode == 1 then
-                            -- Legit mode recast - tunggu full power seperti kinghub
-                            local VirtualInputManager = game:GetService("VirtualInputManager")
-                            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, player, 0)
+        local success, err = pcall(function()
+            if gui.Name == "reel" then
+                if character and character:FindFirstChildOfClass("Tool") then
+                    local tool = character:FindFirstChildOfClass("Tool")
+                    if tool and tool:FindFirstChild("events") then
+                        local castEvent = tool.events:FindFirstChild("cast")
+                        if castEvent then
+                            task.wait(2) -- Delay sebelum recast
                             
-                            local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-                            if humanoidRootPart then
-                                local powerConnection
-                                powerConnection = humanoidRootPart.ChildAdded:Connect(function(powerChild)
-                                    if powerChild.Name == "power" then
-                                        local powerbar = powerChild:FindFirstChild("powerbar")
-                                        if powerbar and powerbar:FindFirstChild("bar") then
-                                            local barConnection
-                                            barConnection = powerbar.bar:GetPropertyChangedSignal("Size"):Connect(function()
-                                                -- Release saat mencapai FULL power (100%) seperti kinghub
-                                                if powerbar.bar.Size == UDim2.new(1, 0, 1, 0) then
-                                                    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, player, 0)
-                                                    barConnection:Disconnect()
-                                                    powerConnection:Disconnect()
-                                                end
-                                            end)
+                            if autofarm.castMode == 1 then
+                                -- Legit mode recast - tunggu full power seperti kinghub
+                                local VirtualInputManager = game:GetService("VirtualInputManager")
+                                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, player, 0)
+                            
+                                if character and character:FindFirstChild("HumanoidRootPart") then
+                                    local humanoidRootPart = character.HumanoidRootPart
+                                    local powerConnection
+                                    powerConnection = humanoidRootPart.ChildAdded:Connect(function(powerChild)
+                                        if powerChild.Name == "power" then
+                                            local powerbar = powerChild:FindFirstChild("powerbar")
+                                            if powerbar and powerbar:FindFirstChild("bar") then
+                                                local barConnection
+                                                barConnection = powerbar.bar:GetPropertyChangedSignal("Size"):Connect(function()
+                                                    -- Release saat mencapai FULL power (100%) seperti kinghub
+                                                    if powerbar.bar.Size == UDim2.new(1, 0, 1, 0) then
+                                                        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, player, 0)
+                                                        barConnection:Disconnect()
+                                                        powerConnection:Disconnect()
+                                                    end
+                                                end)
+                                            end
                                         end
-                                    end
-                                end)
-                            end
+                                    end)
+                                end
                             
-                        elseif autofarm.castMode == 2 then
-                            -- Rage mode recast
-                            castEvent:FireServer(100)
-                            
-                        elseif autofarm.castMode == 3 then
-                            -- Random mode recast - random target 85-95%
-                            local VirtualInputManager = game:GetService("VirtualInputManager")
-                            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, player, 0)
-                            
-                            local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-                            if humanoidRootPart then
-                                local powerConnection
-                                powerConnection = humanoidRootPart.ChildAdded:Connect(function(powerChild)
+                            elseif autofarm.castMode == 2 then
+                                -- Rage mode recast
+                                castEvent:FireServer(100)
+                                
+                            elseif autofarm.castMode == 3 then
+                                -- Random mode recast - random target 85-95%
+                                local VirtualInputManager = game:GetService("VirtualInputManager")
+                                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, player, 0)
+                                
+                                if character and character:FindFirstChild("HumanoidRootPart") then
+                                    local humanoidRootPart = character.HumanoidRootPart
+                                    local powerConnection
+                                    powerConnection = humanoidRootPart.ChildAdded:Connect(function(powerChild)
                                     if powerChild.Name == "power" then
                                         local powerbar = powerChild:FindFirstChild("powerbar")
                                         if powerbar and powerbar:FindFirstChild("bar") then
@@ -186,34 +225,89 @@ function autofarm.startAutoCast(mode)
                     end
                 end
             end
+        end)
+        
+        if not success then
+            warn("Auto Cast GUI Remove Hook Error: " .. tostring(err))
         end
     end
     
-    -- Connect events
-    autofarm.castConnection1 = character.ChildAdded:Connect(onCharacterChildAdded)
-    autofarm.castConnection2 = player.PlayerGui.ChildRemoved:Connect(onGuiRemoved)
+    -- Connect events with error handling
+    local success, err = pcall(function()
+        if character then
+            autofarm.castConnection1 = character.ChildAdded:Connect(onCharacterChildAdded)
+        end
+        if player.PlayerGui then
+            autofarm.castConnection2 = player.PlayerGui.ChildRemoved:Connect(onGuiRemoved)
+        end
+    end)
     
-    print("Auto Cast started with mode: " .. autofarm.castMode)
+    if not success then
+        warn("Auto Cast Connection Error: " .. tostring(err))
+    else
+        print("Auto Cast started with mode: " .. autofarm.castMode)
+    end
 end
 
 function autofarm.stopAutoCast()
     autofarm.autoCastEnabled = false
     
-    -- Disconnect connections
-    if autofarm.castConnection1 then
-        autofarm.castConnection1:Disconnect()
-        autofarm.castConnection1 = nil
-    end
-    if autofarm.castConnection2 then
-        autofarm.castConnection2:Disconnect()
-        autofarm.castConnection2 = nil
-    end
+    -- Disconnect connections safely
+    local success, err = pcall(function()
+        if autofarm.castConnection1 then
+            autofarm.castConnection1:Disconnect()
+            autofarm.castConnection1 = nil
+        end
+        if autofarm.castConnection2 then
+            autofarm.castConnection2:Disconnect()
+            autofarm.castConnection2 = nil
+        end
+    end)
     
-    print("Auto Cast stopped")
+    if not success then
+        warn("Auto Cast Stop Error: " .. tostring(err))
+    else
+        print("Auto Cast stopped")
+    end
+end
+
+-- Mode selection functions with safety checks
+function autofarm.setCastMode(mode)
+    if type(mode) == "number" and mode >= 1 and mode <= 3 then
+        autofarm.castMode = mode
+        print("Cast mode set to: " .. mode)
+    else
+        warn("Invalid cast mode: " .. tostring(mode))
+    end
+end
+
+function autofarm.setShakeMode(mode)
+    if type(mode) == "number" and mode >= 1 and mode <= 2 then
+        autofarm.shakeMode = mode
+        print("Shake mode set to: " .. mode)
+    else
+        warn("Invalid shake mode: " .. tostring(mode))
+    end
+end
+
+function autofarm.setReelMode(mode)
+    if type(mode) == "number" and mode >= 1 and mode <= 4 then
+        autofarm.reelMode = mode
+        print("Reel mode set to: " .. mode)
+    else
+        warn("Invalid reel mode: " .. tostring(mode))
+    end
 end
 
 -- Auto Shake dengan 2 mode
 function autofarm.startAutoShake(mode)
+    if not character or not humanoid then
+        if not initializeCharacter() then
+            warn("Cannot start auto shake - character not initialized")
+            return
+        end
+    end
+    
     autofarm.autoShakeEnabled = true
     autofarm.shakeMode = mode or 1
     
@@ -223,7 +317,9 @@ function autofarm.startAutoShake(mode)
             if not autofarm.autoShakeEnabled then return end
             
             local success, err = pcall(function()
-                local playerGui = player:WaitForChild("PlayerGui")
+                local playerGui = player:WaitForChild("PlayerGui", 5)
+                if not playerGui then return end
+                
                 local shakeUI = playerGui:FindFirstChild("shakeui")
                 
                 if shakeUI then
