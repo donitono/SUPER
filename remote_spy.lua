@@ -47,31 +47,44 @@ end
 
 -- Hook all RemoteEvents in ReplicatedStorage
 local function hookRemoteEvents()
-    local events = ReplicatedStorage:FindFirstChild("events")
+    -- Wait for events folder to exist
+    local events = ReplicatedStorage:WaitForChild("events", 5)
     if events then
         print("📡 Hooking events folder...")
         
         for _, event in pairs(events:GetChildren()) do
             if event:IsA("RemoteEvent") then
-                print("🎯 Hooking:", event.Name)
-                
-                -- Hook the FireServer method
-                local originalFireServer = event.FireServer
-                event.FireServer = function(self, ...)
-                    local args = {...}
-                    addEventLog(event.Name, args, "Script/Hack")
+                local success, err = pcall(function()
+                    print("🎯 Hooking:", event.Name)
                     
-                    -- Call original function
-                    return originalFireServer(self, ...)
-                end
-                
-                -- Also listen for server events
-                event.OnClientEvent:Connect(function(...)
-                    local args = {...}
-                    addEventLog(event.Name .. " (Server->Client)", args, "Server")
+                    -- Store original FireServer method safely
+                    local originalFireServer = event.FireServer
+                    if originalFireServer then
+                        event.FireServer = function(self, ...)
+                            local args = {...}
+                            addEventLog(event.Name, args, "Script/Hack")
+                            
+                            -- Call original function
+                            return originalFireServer(self, ...)
+                        end
+                    end
+                    
+                    -- Also listen for server events safely
+                    if event.OnClientEvent then
+                        event.OnClientEvent:Connect(function(...)
+                            local args = {...}
+                            addEventLog(event.Name .. " (Server->Client)", args, "Server")
+                        end)
+                    end
                 end)
+                
+                if not success then
+                    print("❌ Failed to hook:", event.Name, "Error:", err)
+                end
             end
         end
+    else
+        print("⚠️ Events folder not found in ReplicatedStorage")
     end
     
     -- Hook shared events if they exist
@@ -80,20 +93,30 @@ local function hookRemoteEvents()
         local function hookSharedEvents(parent, path)
             for _, child in pairs(parent:GetChildren()) do
                 if child:IsA("RemoteEvent") then
-                    local fullPath = path .. "." .. child.Name
-                    print("🎯 Hooking shared:", fullPath)
-                    
-                    local originalFireServer = child.FireServer
-                    child.FireServer = function(self, ...)
-                        local args = {...}
-                        addEventLog(fullPath, args, "Script/Hack")
-                        return originalFireServer(self, ...)
-                    end
-                    
-                    child.OnClientEvent:Connect(function(...)
-                        local args = {...}
-                        addEventLog(fullPath .. " (Server->Client)", args, "Server")
+                    local success, err = pcall(function()
+                        local fullPath = path .. "." .. child.Name
+                        print("🎯 Hooking shared:", fullPath)
+                        
+                        local originalFireServer = child.FireServer
+                        if originalFireServer then
+                            child.FireServer = function(self, ...)
+                                local args = {...}
+                                addEventLog(fullPath, args, "Script/Hack")
+                                return originalFireServer(self, ...)
+                            end
+                        end
+                        
+                        if child.OnClientEvent then
+                            child.OnClientEvent:Connect(function(...)
+                                local args = {...}
+                                addEventLog(fullPath .. " (Server->Client)", args, "Server")
+                            end)
+                        end
                     end)
+                    
+                    if not success then
+                        print("❌ Failed to hook shared event:", child.Name, "Error:", err)
+                    end
                 elseif child:IsA("Folder") then
                     hookSharedEvents(child, path .. "." .. child.Name)
                 end
@@ -108,19 +131,29 @@ end
 local function monitorNewEvents()
     local function setupEventHook(event, path)
         if event:IsA("RemoteEvent") then
-            print("🆕 New event detected:", path)
-            
-            local originalFireServer = event.FireServer
-            event.FireServer = function(self, ...)
-                local args = {...}
-                addEventLog(path, args, "Script/Hack (New)")
-                return originalFireServer(self, ...)
-            end
-            
-            event.OnClientEvent:Connect(function(...)
-                local args = {...}
-                addEventLog(path .. " (Server->Client)", args, "Server (New)")
+            local success, err = pcall(function()
+                print("🆕 New event detected:", path)
+                
+                local originalFireServer = event.FireServer
+                if originalFireServer then
+                    event.FireServer = function(self, ...)
+                        local args = {...}
+                        addEventLog(path, args, "Script/Hack (New)")
+                        return originalFireServer(self, ...)
+                    end
+                end
+                
+                if event.OnClientEvent then
+                    event.OnClientEvent:Connect(function(...)
+                        local args = {...}
+                        addEventLog(path .. " (Server->Client)", args, "Server (New)")
+                    end)
+                end
             end)
+            
+            if not success then
+                print("❌ Failed to hook new event:", path, "Error:", err)
+            end
         end
     end
     
@@ -222,9 +255,32 @@ local function saveLogsToFile()
     end
 end
 
--- Initialize hooking
-hookRemoteEvents()
-monitorNewEvents()
+-- Initialize hooking with safety checks
+local function initializeSpy()
+    -- Wait for game to load
+    if not game:IsLoaded() then
+        game.Loaded:Wait()
+    end
+    
+    -- Small delay to ensure everything is ready
+    wait(1)
+    
+    local success, err = pcall(function()
+        hookRemoteEvents()
+        monitorNewEvents()
+    end)
+    
+    if not success then
+        print("❌ Spy initialization failed:", err)
+        print("⚠️ Trying alternative method...")
+        
+        -- Alternative: Just monitor without hooking existing events
+        pcall(monitorNewEvents)
+    end
+end
+
+-- Start initialization
+spawn(initializeSpy)
 
 -- Global commands for manual control
 _G.RemoteEventSpy = {
