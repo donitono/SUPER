@@ -14,6 +14,186 @@ Return:
 Each Window exposes: CreateTab.
 Each Tab exposes: CreateSection, CreateToggle, CreateDropdown, CreateSlider, CreateButton, CreateLabel.
 ]]
+-- Fluent UI Stub Library
+-- Lightweight replacement for the external GUI libs used in kinghub.lua
+-- Provides just enough structure for the existing script logic to run without errors.
+
+local Library = {}
+Library._watermark = ""
+Library._unloadCbs = {}
+Library.Unloaded = false
+
+local Options = {}
+local Toggles = {}
+
+-- Expose globally (to mimic original environment expectations)
+getgenv = getgenv or function() return _G end
+local env = getgenv()
+env.Options = env.Options or Options
+env.Toggles = env.Toggles or Toggles
+
+-- Utility constructors -------------------------------------------------------
+
+local function makeSignal()
+    local listeners = {}
+    return {
+        Connect = function(_, fn)
+            listeners[fn] = true
+            return { Disconnect = function() listeners[fn] = nil end }
+        end,
+        Fire = function(_, ...)
+            for fn in pairs(listeners) do
+                local ok, err = pcall(fn, ...)
+                if not ok then warn("Fluent signal error:", err) end
+            end
+        end
+    }
+end
+
+-- Simple helper objects -----------------------------------------------------
+
+local function newGroupBox(name)
+    local gb = { Name = name, _deps = {} }
+
+    function gb:AddLabel(text)
+            local label = { Text = text }
+            -- Support chained :AddKeyPicker similar to original UI lib
+            function label:AddKeyPicker(key, data)
+                Options[key] = { Value = data.Default, Raw = data, Callback = data.Callback }
+                function Options[key]:SetValue(v)
+                    self.Value = v
+                    if self.Callback then pcall(self.Callback, v) end
+                end
+                return Options[key]
+            end
+            return label
+    end
+
+    function gb:AddButton(cfgOrText, fn)
+        local cfg = type(cfgOrText) == 'table' and cfgOrText or { Text = cfgOrText, Func = fn }
+        local btn = {
+            Text = cfg.Text,
+            Func = cfg.Func or function() end,
+            DoubleClick = cfg.DoubleClick,
+            Tooltip = cfg.Tooltip
+        }
+        return btn
+    end
+
+    function gb:AddToggle(key, data)
+        Toggles[key] = { Value = data.Default, Callback = data.Callback }
+        function Toggles[key]:SetValue(v)
+            self.Value = v
+            if data.Callback then
+                pcall(data.Callback, v)
+            end
+        end
+        return Toggles[key]
+    end
+
+    function gb:AddSlider(key, data)
+        Options[key] = { Value = data.Default, Min = data.Min, Max = data.Max, Callback = data.Callback }
+        function Options[key]:SetValue(v)
+            self.Value = v
+            if data.Callback then pcall(data.Callback, v) end
+        end
+        return Options[key]
+    end
+
+    function gb:AddDropdown(key, data)
+        Options[key] = { Value = data.Default, Values = data.Values, Callback = data.Callback, SpecialType = data.SpecialType }
+        function Options[key]:SetValue(v)
+            self.Value = v
+            if data.Callback then pcall(data.Callback, v) end
+        end
+        return Options[key]
+    end
+
+    function gb:AddDependencyBox()
+        local box = { _rules = {} }
+        function box:SetupDependencies(rules)
+            self._rules = rules
+        end
+        -- Pass-through wrappers to reuse groupbox API
+        function box:AddDropdown(...) return gb:AddDropdown(...) end
+        function box:AddSlider(...) return gb:AddSlider(...) end
+        function box:AddToggle(...) return gb:AddToggle(...) end
+        function box:AddLabel(...) return gb:AddLabel(...) end
+        return box
+    end
+
+    return gb
+end
+
+local function newTab(name)
+    local tab = { Name = name, Left = {}, Right = {} }
+    function tab:AddLeftGroupbox(n)
+        local gb = newGroupBox(n)
+        table.insert(self.Left, gb)
+        return gb
+    end
+    function tab:AddRightGroupbox(n)
+        local gb = newGroupBox(n)
+        table.insert(self.Right, gb)
+        return gb
+    end
+    return tab
+end
+
+function Library:CreateWindow(cfg)
+    local win = { Title = cfg.Title, Tabs = {} }
+    function win:AddTab(name)
+        local tab = newTab(name)
+        self.Tabs[name] = tab
+        return tab
+    end
+    return win
+end
+
+function Library:SetWatermark(text)
+    self._watermark = text
+end
+
+function Library:Notify(msg)
+    print("[Fluent Notify] " .. tostring(msg))
+end
+
+function Library:OnUnload(cb)
+    table.insert(self._unloadCbs, cb)
+end
+
+function Library:Unload()
+    if self.Unloaded then return end
+    for _, cb in ipairs(self._unloadCbs) do
+        pcall(cb)
+    end
+    self.Unloaded = true
+    print("[Fluent] Unloaded")
+end
+
+-- ThemeManager stub ---------------------------------------------------------
+local ThemeManager = {}
+function ThemeManager:SetLibrary(_) end
+function ThemeManager:SetFolder(_) end
+function ThemeManager:ApplyToTab(_) end
+
+-- SaveManager stub ----------------------------------------------------------
+local SaveManager = {}
+function SaveManager:SetLibrary(_) end
+function SaveManager:IgnoreThemeSettings() end
+function SaveManager:SetIgnoreIndexes(_) end
+function SaveManager:SetFolder(_) end
+function SaveManager:BuildConfigSection(_) end
+function SaveManager:LoadAutoloadConfig() end
+
+-- Return packed modules to mimic multiple loadstrings
+return {
+    Library = Library,
+    ThemeManager = ThemeManager,
+    SaveManager = SaveManager,
+    Options = Options,
+    Toggles = Toggles
+}
 
 local function noop() end
 
