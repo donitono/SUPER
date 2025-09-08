@@ -17,6 +17,26 @@ local logData = {}
 local maxLogEntries = 1000
 local debugUI = nil
 
+-- Function untuk add log entry
+local function addLog(message, category)
+    category = category or "INFO"
+    local timestamp = tick() -- Gunakan tick() sebagai ganti os.date()
+    local logEntry = "[" .. math.floor(timestamp) .. "] [" .. category .. "] " .. message
+    
+    table.insert(logData, logEntry)
+    print(logEntry)
+    
+    -- Keep only recent entries
+    if #logData > maxLogEntries then
+        table.remove(logData, 1)
+    end
+    
+    -- Update UI if exists
+    if debugUI and debugUI.Parent then
+        updateLogDisplay()
+    end
+end
+
 -- Function untuk save log to file
 local function saveLogToFile()
     local success, err = pcall(function()
@@ -85,26 +105,6 @@ local function testReelEvents()
         end
     else
         addLog("❌ No events folder found", "ERROR")
-    end
-end
-
--- Function untuk add log entry
-local function addLog(message, category)
-    category = category or "INFO"
-    local timestamp = tick() -- Gunakan tick() sebagai ganti os.date()
-    local logEntry = "[" .. math.floor(timestamp) .. "] [" .. category .. "] " .. message
-    
-    table.insert(logData, logEntry)
-    print(logEntry)
-    
-    -- Keep only recent entries
-    if #logData > maxLogEntries then
-        table.remove(logData, 1)
-    end
-    
-    -- Update UI if exists
-    if debugUI and debugUI.Parent then
-        updateLogDisplay()
     end
 end
 
