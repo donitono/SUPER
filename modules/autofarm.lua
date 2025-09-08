@@ -143,11 +143,6 @@ function autofarm.startAutoCast(mode)
                                 end
                             end)
                         end
-                                        end)
-                                    end
-                                end
-                            end)
-                        end
                         
                     elseif autofarm.castMode == 2 then
                         -- Mode 2: Rage - direct FireServer
@@ -187,7 +182,7 @@ function autofarm.startAutoCast(mode)
                 end
             end
         end
-    end
+    end -- End of onCharacterChildAdded function
     
     -- Hook untuk reel finished (auto recast)
     local function onGuiRemoved(gui)
@@ -500,8 +495,6 @@ function autofarm.startAutoReel(mode)
                             local debugInfo = string.format(
                                 "Fish=%.0f%%, Bar=%.0f%%->%.0f%%, Status=%s, Action=%s, State=%s",
                                 fishX*100, barLeft*100, barRight*100, status, action, holding
-                            )
-                                fishX*100, barLeft*100, barRight*100, barCenter*100, status, action
                             )
                             print("Auto Reel Legit: " .. debugInfo)
                         end
