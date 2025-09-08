@@ -69,7 +69,7 @@ function autofarm.startAutoCast(mode)
                         castEvent:FireServer(100)
                         
                     elseif autofarm.castMode == 3 then
-                        -- Mode 3: Random - legit with random timing (85-100%)
+                        -- Mode 3: Random - legit with random timing (85-95%)
                         local VirtualInputManager = game:GetService("VirtualInputManager")
                         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, player, 0)
                         
@@ -81,13 +81,16 @@ function autofarm.startAutoCast(mode)
                                     local powerbar = powerChild:FindFirstChild("powerbar")
                                     if powerbar and powerbar:FindFirstChild("bar") then
                                         local barConnection
-                                        -- Random target antara 85-100% untuk variasi
-                                        local randomTarget = math.random(85, 100) / 100
+                                        -- Random target antara 85-95% untuk variasi yang lebih masuk akal
+                                        local randomPercent = math.random(85, 95)
+                                        local randomTarget = UDim2.new(randomPercent/100, 0, 1, 0)
                                         barConnection = powerbar.bar:GetPropertyChangedSignal("Size"):Connect(function()
-                                            if powerbar.bar.Size.X.Scale >= randomTarget then
+                                            -- Bandingkan dengan UDim2 yang benar
+                                            if powerbar.bar.Size.X.Scale >= (randomPercent/100) then
                                                 VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, player, 0)
                                                 barConnection:Disconnect()
                                                 powerConnection:Disconnect()
+                                                print("Random Cast: Released at " .. randomPercent .. "%")
                                             end
                                         end)
                                     end
@@ -147,7 +150,7 @@ function autofarm.startAutoCast(mode)
                             castEvent:FireServer(100)
                             
                         elseif autofarm.castMode == 3 then
-                            -- Random mode recast - random target 85-100%
+                            -- Random mode recast - random target 85-95%
                             local VirtualInputManager = game:GetService("VirtualInputManager")
                             VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, player, 0)
                             
@@ -159,13 +162,15 @@ function autofarm.startAutoCast(mode)
                                         local powerbar = powerChild:FindFirstChild("powerbar")
                                         if powerbar and powerbar:FindFirstChild("bar") then
                                             local barConnection
-                                            -- Random target antara 85-100% untuk variasi
-                                            local randomTarget = math.random(85, 100) / 100
+                                            -- Random target antara 85-95% untuk variasi yang masuk akal
+                                            local randomPercent = math.random(85, 95)
                                             barConnection = powerbar.bar:GetPropertyChangedSignal("Size"):Connect(function()
-                                                if powerbar.bar.Size.X.Scale >= randomTarget then
+                                                -- Bandingkan dengan nilai yang benar
+                                                if powerbar.bar.Size.X.Scale >= (randomPercent/100) then
                                                     VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, player, 0)
                                                     barConnection:Disconnect()
                                                     powerConnection:Disconnect()
+                                                    print("Random Recast: Released at " .. randomPercent .. "%")
                                                 end
                                             end)
                                         end
