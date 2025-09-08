@@ -2,12 +2,26 @@
 -- Script untuk monitoring minigame reel dan mendeteksi events/modules yang digunakan
 -- Jalankan script ini lalu masuk ke minigame reel untuk melihat data
 
+-- Safe service loading dengan error handling
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local CoreGui = game:GetService("CoreGui")
-local UserInputService = game:GetService("UserInputService")
-local HttpService = game:GetService("HttpService")
+
+-- Optional services (mungkin tidak tersedia di semua executor)
+local CoreGui, UserInputService, HttpService
+local success1, err1 = pcall(function()
+    CoreGui = game:GetService("CoreGui")
+end)
+local success2, err2 = pcall(function()
+    UserInputService = game:GetService("UserInputService")
+end)
+local success3, err3 = pcall(function()
+    HttpService = game:GetService("HttpService")
+end)
+
+if not success1 then print("CoreGui not available:", err1) end
+if not success2 then print("UserInputService not available:", err2) end
+if not success3 then print("HttpService not available:", err3) end
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -17,10 +31,41 @@ local logData = {}
 local maxLogEntries = 1000
 local debugUI = nil
 
+-- Safe date functions untuk compatibility
+local function getSafeTimestamp()
+    if os and os.date then
+        local success, result = pcall(function()
+            return os.date("%H:%M:%S")
+        end)
+        if success then return result end
+    end
+    return "00:00:00"
+end
+
+local function getSafeDate()
+    if os and os.date then
+        local success, result = pcall(function()
+            return os.date("%Y-%m-%d %H:%M:%S")
+        end)
+        if success then return result end
+    end
+    return "1970-01-01 00:00:00"
+end
+
+local function getSafeFilename()
+    if os and os.date then
+        local success, result = pcall(function()
+            return os.date("%Y%m%d_%H%M%S")
+        end)
+        if success then return result end
+    end
+    return "19700101_000000"
+end
+
 -- Function untuk add log entry
 local function addLog(message, category)
     category = category or "INFO"
-    local timestamp = os.date("%H:%M:%S")
+    local timestamp = getSafeTimestamp()
     local logEntry = "[" .. timestamp .. "] [" .. category .. "] " .. message
     
     table.insert(logData, logEntry)
@@ -39,6 +84,11 @@ end
 
 -- Function untuk create debug UI
 local function createDebugUI()
+    if not CoreGui then
+        addLog("⚠️ CoreGui not available - UI disabled", "WARNING")
+        return nil, nil
+    end
+    
     if debugUI and debugUI.Parent then
         debugUI:Destroy()
     end
@@ -263,9 +313,9 @@ local function saveLogToFile()
     addLog("💾 Starting save operation...", "SYSTEM")
     
     local success, err = pcall(function()
-        local fileName = "ReelDebugLog_" .. os.date("%Y%m%d_%H%M%S") .. ".txt"
+        local fileName = "ReelDebugLog_" .. getSafeFilename() .. ".txt"
         local content = "=== REEL DEBUGGER LOG ===\n"
-        content = content .. "Generated: " .. os.date("%Y-%m-%d %H:%M:%S") .. "\n"
+        content = content .. "Generated: " .. getSafeDate() .. "\n"
         content = content .. "Player: " .. (player and player.Name or "Unknown") .. "\n"
         content = content .. "Total Entries: " .. #logData .. "\n\n"
         
@@ -653,11 +703,19 @@ end
 
 -- Initialize monitoring systems
 addLog("🚀 Reel Debugger initialized", "SYSTEM")
-addLog("Creating debug UI...", "SYSTEM")
 
-local statusLabel, logText = createDebugUI()
-
-addLog("✅ Debug UI created", "SYSTEM")
+local statusLabel, logText
+if CoreGui then
+    addLog("Creating debug UI...", "SYSTEM")
+    statusLabel, logText = createDebugUI()
+    if statusLabel and logText then
+        addLog("✅ Debug UI created", "SYSTEM")
+    else
+        addLog("⚠️ Debug UI creation failed", "WARNING")
+    end
+else
+    addLog("⚠️ UI disabled - CoreGui not available", "WARNING")
+end
 addLog("Setting up monitoring systems...", "SYSTEM")
 
 monitorChildChanges(playerGui, "PlayerGui")
@@ -725,8 +783,8 @@ _G.ReelDebugger = {
         addLog("🔧 Force Export - Trying all methods...", "EXPORT")
         
         local content = "=== REEL DEBUGGER LOG ===\n"
-        content = content .. "Generated: " .. os.date("%Y-%m-%d %H:%M:%S") .. "\n"
-        content = content .. "Player: " .. player.Name .. "\n"
+        content = content .. "Generated: " .. getSafeDate() .. "\n"
+        content = content .. "Player: " .. (player and player.Name or "Unknown") .. "\n"
         content = content .. "Total Entries: " .. #logData .. "\n\n"
         content = content .. table.concat(logData, "\n")
         
