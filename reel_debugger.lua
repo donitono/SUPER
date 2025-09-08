@@ -340,19 +340,33 @@ function analyzeReelUI(reelGui)
     local function analyzeRecursive(obj, indent)
         local info = string.rep("  ", indent) .. "├─ " .. obj.Name .. " (" .. obj.ClassName .. ")"
         
-        if obj:IsA("GuiBase2d") then
+        -- Check if object has Visible property (most GUI objects do)
+        local hasVisible = pcall(function() return obj.Visible end)
+        if hasVisible then
             info = info .. " - Visible: " .. tostring(obj.Visible)
-            if obj:IsA("GuiObject") then
+        end
+        
+        -- Check if object has Size/Position (GuiObject descendants)
+        if obj:IsA("GuiObject") then
+            local hasSize = pcall(function() return obj.Size end)
+            local hasPosition = pcall(function() return obj.Position end)
+            if hasSize then
                 info = info .. " - Size: " .. tostring(obj.Size)
+            end
+            if hasPosition then
                 info = info .. " - Position: " .. tostring(obj.Position)
             end
         end
         
-        if obj:IsA("TextLabel") or obj:IsA("TextButton") then
+        -- Check if object has Text property
+        local hasText = pcall(function() return obj.Text end)
+        if hasText and obj.Text then
             info = info .. " - Text: '" .. obj.Text .. "'"
         end
         
-        if obj:IsA("Frame") or obj:IsA("ImageLabel") then
+        -- Check if object has BackgroundColor3 property
+        local hasBGColor = pcall(function() return obj.BackgroundColor3 end)
+        if hasBGColor then
             info = info .. " - BG Color: " .. tostring(obj.BackgroundColor3)
         end
         
@@ -373,28 +387,39 @@ local function monitorReelChanges(reelGui)
     addLog("👀 Monitoring reel UI changes...", "MONITOR")
     
     local function monitorObject(obj, path)
-        -- Monitor property changes
-        obj:GetPropertyChangedSignal("Visible"):Connect(function()
-            addLog(path .. " visibility changed: " .. tostring(obj.Visible), "PROPERTY")
-        end)
-        
-        if obj:IsA("GuiObject") then
-            obj:GetPropertyChangedSignal("Size"):Connect(function()
-                addLog(path .. " size changed: " .. tostring(obj.Size), "PROPERTY")
-            end)
-            
-            obj:GetPropertyChangedSignal("Position"):Connect(function()
-                addLog(path .. " position changed: " .. tostring(obj.Position), "PROPERTY")
+        -- Monitor property changes with safe checking
+        local hasVisible = pcall(function() return obj.Visible end)
+        if hasVisible then
+            obj:GetPropertyChangedSignal("Visible"):Connect(function()
+                addLog(path .. " visibility changed: " .. tostring(obj.Visible), "PROPERTY")
             end)
         end
         
-        if obj:IsA("TextLabel") or obj:IsA("TextButton") then
+        if obj:IsA("GuiObject") then
+            local hasSize = pcall(function() return obj.Size end)
+            if hasSize then
+                obj:GetPropertyChangedSignal("Size"):Connect(function()
+                    addLog(path .. " size changed: " .. tostring(obj.Size), "PROPERTY")
+                end)
+            end
+            
+            local hasPosition = pcall(function() return obj.Position end)
+            if hasPosition then
+                obj:GetPropertyChangedSignal("Position"):Connect(function()
+                    addLog(path .. " position changed: " .. tostring(obj.Position), "PROPERTY")
+                end)
+            end
+        end
+        
+        local hasText = pcall(function() return obj.Text end)
+        if hasText then
             obj:GetPropertyChangedSignal("Text"):Connect(function()
                 addLog(path .. " text changed: '" .. obj.Text .. "'", "PROPERTY")
             end)
         end
         
-        if obj:IsA("Frame") or obj:IsA("ImageLabel") then
+        local hasBGColor = pcall(function() return obj.BackgroundColor3 end)
+        if hasBGColor then
             obj:GetPropertyChangedSignal("BackgroundColor3"):Connect(function()
                 addLog(path .. " color changed: " .. tostring(obj.BackgroundColor3), "PROPERTY")
             end)
