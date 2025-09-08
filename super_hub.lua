@@ -39,7 +39,8 @@ local Config = {
     },
     AutoReel = {
         enabled = false,
-        delay = 2
+        delay = 2,
+        mode = "Normal" -- "Normal", "Perfect", "Instant"
     },
     AutoCast = {
         enabled = false,
@@ -52,25 +53,25 @@ local Config = {
 local ModePresets = {
     Safe = {
         AutoShake = { delay = {0.8, 1.5}, method = "KeyCodeEvent" },
-        AutoReel = { delay = {3, 5} },
+        AutoReel = { delay = {3, 5}, mode = "Normal" },
         AutoCast = { delay = {4, 7}, mode = "Legit" },
         description = "Safest settings with human-like delays"
     },
     Normal = {
         AutoShake = { delay = {0.3, 0.8}, method = "KeyCodeEvent" },
-        AutoReel = { delay = {2, 3} },
+        AutoReel = { delay = {2, 3}, mode = "Normal" },
         AutoCast = { delay = {2, 4}, mode = "Legit" },
         description = "Balanced performance and safety"
     },
     Risky = {
         AutoShake = { delay = {0.1, 0.3}, method = "ClickEvent" },
-        AutoReel = { delay = {1, 2} },
+        AutoReel = { delay = {1, 2}, mode = "Perfect" },
         AutoCast = { delay = {1, 2}, mode = "Legit" },
         description = "Fast but higher detection risk"
     },
     Rage = {
         AutoShake = { delay = {0.05, 0.1}, method = "ClickEvent" },
-        AutoReel = { delay = {0.5, 1} },
+        AutoReel = { delay = {0.5, 1}, mode = "Instant" },
         AutoCast = { delay = {0.5, 1}, mode = "Rage" },
         description = "Maximum speed - HIGH RISK!"
     }
@@ -112,6 +113,7 @@ local function applyModePreset(mode)
     
     -- Update config with preset values
     Config.AutoShake.method = preset.AutoShake.method
+    Config.AutoReel.mode = preset.AutoReel.mode
     Config.AutoCast.mode = preset.AutoCast.mode
     
     print("Applied", mode, "mode:", preset.description)
@@ -206,12 +208,91 @@ local function setupAutoReel()
     
     connections.autoReel = PlayerGUI.ChildAdded:Connect(function(GUI)
         if GUI:IsA("ScreenGui") and GUI.Name == "reel" then
-            if Config.AutoReel.enabled and ReplicatedStorage:WaitForChild("events"):WaitForChild("reelfinished") ~= nil then
+            if Config.AutoReel.enabled then
                 local currentDelay = getDelayForFeature("AutoReel")
-                repeat 
-                    task.wait(currentDelay) 
-                    ReplicatedStorage.events.reelfinished:FireServer(100, false) 
-                until GUI == nil
+                
+                if Config.AutoReel.mode == "Instant" then
+                    -- Instant mode - langsung complete
+                    if ReplicatedStorage:WaitForChild("events"):WaitForChild("reelfinished") ~= nil then
+                        task.wait(currentDelay)
+                        ReplicatedStorage.events.reelfinished:FireServer(100, false)
+                    end
+                    
+                elseif Config.AutoReel.mode == "Perfect" then
+                    -- Perfect mode - follow progress bar perfectly
+                    if GUI:FindFirstChild("bar") and GUI.bar:FindFirstChild("playerbar") then
+                        local playerBar = GUI.bar.playerbar
+                        local connection
+                        
+                        connection = RunService.Heartbeat:Connect(function()
+                            if GUI.Parent == nil then
+                                connection:Disconnect()
+                                return
+                            end
+                            
+                            -- Follow the white progress bar perfectly
+                            if playerBar and playerBar.Size then
+                                local targetSize = playerBar.Size.X.Scale
+                                if targetSize > 0.95 then -- Near completion
+                                    if ReplicatedStorage:WaitForChild("events"):WaitForChild("reelfinished") ~= nil then
+                                        ReplicatedStorage.events.reelfinished:FireServer(100, false)
+                                        connection:Disconnect()
+                                    end
+                                end
+                            end
+                        end)
+                    else
+                        -- Fallback to instant if can't find bars
+                        task.wait(currentDelay)
+                        if ReplicatedStorage:WaitForChild("events"):WaitForChild("reelfinished") ~= nil then
+                            ReplicatedStorage.events.reelfinished:FireServer(100, false)
+                        end
+                    end
+                    
+                elseif Config.AutoReel.mode == "Normal" then
+                    -- Normal mode - wait for progress and complete realistically
+                    if GUI:FindFirstChild("bar") and GUI.bar:FindFirstChild("playerbar") then
+                        local playerBar = GUI.bar.playerbar
+                        local connection
+                        local hasStartedReeling = false
+                        
+                        connection = RunService.Heartbeat:Connect(function()
+                            if GUI.Parent == nil then
+                                connection:Disconnect()
+                                return
+                            end
+                            
+                            if playerBar and playerBar.Size then
+                                local currentProgress = playerBar.Size.X.Scale
+                                
+                                -- Start reeling when progress begins
+                                if currentProgress > 0.1 and not hasStartedReeling then
+                                    hasStartedReeling = true
+                                    task.wait(currentDelay)
+                                end
+                                
+                                -- Complete when progress is substantial but not perfect
+                                if hasStartedReeling and currentProgress > 0.7 then
+                                    local randomCompletion = 0.75 + math.random() * 0.2 -- 75-95%
+                                    if currentProgress >= randomCompletion then
+                                        if ReplicatedStorage:WaitForChild("events"):WaitForChild("reelfinished") ~= nil then
+                                            ReplicatedStorage.events.reelfinished:FireServer(100, false)
+                                            connection:Disconnect()
+                                        end
+                                    end
+                                end
+                            end
+                        end)
+                    else
+                        -- Fallback method
+                        repeat 
+                            task.wait(currentDelay) 
+                            if ReplicatedStorage:WaitForChild("events"):WaitForChild("reelfinished") ~= nil then
+                                ReplicatedStorage.events.reelfinished:FireServer(100, false)
+                            end
+                        until GUI == nil
+                    end
+                end
             end
         end
     end)
@@ -339,6 +420,17 @@ local AutoReelToggle = Tabs.Main:AddToggle("AutoReel", {
     end
 })
 
+local AutoReelMode = Tabs.Main:AddDropdown("AutoReelMode", {
+    Title = "Auto Reel Mode",
+    Description = "Choose how the auto reel behaves",
+    Values = {"Normal", "Perfect", "Instant"},
+    Default = Config.AutoReel.mode,
+    Callback = function(Value)
+        Config.AutoReel.mode = Value
+        print("Auto Reel Mode:", Value)
+    end
+})
+
 local AutoReelDelay = Tabs.Main:AddSlider("AutoReelDelay", {
     Title = "Auto Reel Delay",
     Description = "Delay before reeling in",
@@ -393,8 +485,8 @@ local AutoCastDelay = Tabs.Main:AddSlider("AutoCastDelay", {
 Tabs.Settings:AddSection("Information")
 
 Tabs.Settings:AddParagraph({
-    Title = "SUPER HUB v1.1",
-    Content = "A modular fishing script with multiple safety modes.\n\n🟢 Safe Mode: Maximum safety, human-like delays\n🟡 Normal Mode: Balanced performance\n🟠 Risky Mode: Faster but riskier\n🔴 Rage Mode: Maximum speed, HIGH RISK!"
+    Title = "SUPER HUB v1.2",
+    Content = "A modular fishing script with multiple safety modes and advanced reel system.\n\n🟢 Safe Mode: Maximum safety, human-like delays\n🟡 Normal Mode: Balanced performance\n🟠 Risky Mode: Faster but riskier\n🔴 Rage Mode: Maximum speed, HIGH RISK!\n\n🎣 Reel Modes:\n• Normal: Realistic progress following\n• Perfect: Follows progress bar perfectly\n• Instant: Immediate completion"
 })
 
 Tabs.Settings:AddSection("Current Mode Info")
@@ -407,12 +499,13 @@ local function updateModeInfo()
         local castDelay = preset.AutoCast.delay
         
         return string.format(
-            "Mode: %s\n\nShake Delay: %.1f-%.1fs\nReel Delay: %.1f-%.1fs\nCast Delay: %.1f-%.1fs\nMethod: %s\nCast Mode: %s",
+            "Mode: %s\n\nShake Delay: %.1f-%.1fs\nReel Delay: %.1f-%.1fs\nCast Delay: %.1f-%.1fs\nShake Method: %s\nReel Mode: %s\nCast Mode: %s",
             Config.General.mode,
             shakeDelay[1], shakeDelay[2],
             reelDelay[1], reelDelay[2], 
             castDelay[1], castDelay[2],
             preset.AutoShake.method,
+            preset.AutoReel.mode,
             preset.AutoCast.mode
         )
     end
@@ -474,8 +567,8 @@ initializeConnections()
 
 -- Welcome notification
 Fluent:Notify({
-    Title = "SUPER HUB v1.1",
-    Content = "Successfully loaded with " .. Config.General.mode .. " mode! Anti-cheat optimized.",
+    Title = "SUPER HUB v1.2",
+    Content = "Successfully loaded with " .. Config.General.mode .. " mode! Advanced reel system enabled.",
     Duration = 5
 })
 
