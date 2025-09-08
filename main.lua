@@ -24,11 +24,25 @@ local Window = Library.CreateLib("SUPER HUB v1.0", "DarkTheme")
 local AutofarmTab = Window:NewTab("🎣 Autofarm")
 local AutofarmSection = AutofarmTab:NewSection("Fishing Automation")
 
+-- Cast Mode Selection
+local currentCastMode = 1
+AutofarmSection:NewDropdown("Cast Mode", "Select auto cast mode", {"Mode 1 (Legit)", "Mode 2 (Rage)", "Mode 3 (Random)"}, function(option)
+    if option == "Mode 1 (Legit)" then
+        currentCastMode = 1
+    elseif option == "Mode 2 (Rage)" then
+        currentCastMode = 2
+    elseif option == "Mode 3 (Random)" then
+        currentCastMode = 3
+    end
+    autofarm.setCastMode(currentCastMode)
+    print("Cast Mode changed to: " .. currentCastMode)
+end)
+
 -- Auto Cast
 AutofarmSection:NewToggle("Auto Cast", "Automatically cast fishing rod", function(state)
     if state then
-        autofarm.startAutoCast()
-        print("Auto Cast: Enabled")
+        autofarm.startAutoCast(currentCastMode)
+        print("Auto Cast: Enabled (Mode " .. currentCastMode .. ")")
     else
         autofarm.stopAutoCast()
         print("Auto Cast: Disabled")
@@ -83,8 +97,9 @@ end)
 local QuickSection = AutofarmTab:NewSection("Quick Actions")
 
 QuickSection:NewButton("Start All Autofarm", "Enable all autofarm features", function()
-    autofarm.startAll(currentShakeMode)
+    autofarm.startAll(currentShakeMode, currentCastMode)
     print("All Autofarm Features: Enabled")
+    print("Cast Mode: " .. currentCastMode .. ", Shake Mode: " .. currentShakeMode)
 end)
 
 QuickSection:NewButton("Stop All Autofarm", "Disable all autofarm features", function()
@@ -99,6 +114,7 @@ QuickSection:NewButton("Check Status", "Show current autofarm status", function(
     print("Auto Shake: " .. tostring(status.autoShake))
     print("Auto Reel: " .. tostring(status.autoReel))
     print("Always Catch: " .. tostring(status.alwaysCatch))
+    print("Cast Mode: " .. tostring(status.castMode))
     print("Shake Mode: " .. tostring(status.shakeMode))
     print("=====================")
 end)

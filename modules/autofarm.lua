@@ -20,19 +20,36 @@ autofarm.autoShakeEnabled = false
 autofarm.autoReelEnabled = false
 autofarm.alwaysCatchEnabled = false
 autofarm.shakeMode = 1 -- 1 = sanhub method, 2 = neoxhub method
+autofarm.castMode = 1 -- 1 = legit, 2 = rage, 3 = random
 
 -- Auto Cast (dari kinghub dengan metodenya)
-function autofarm.startAutoCast()
+function autofarm.startAutoCast(mode)
     autofarm.autoCastEnabled = true
+    autofarm.castMode = mode or 1
+    
     spawn(function()
         while autofarm.autoCastEnabled do
             local success, err = pcall(function()
-                -- Method dari kinghub - menggunakan ReplicatedStorage events
                 local castEvent = ReplicatedStorage:FindFirstChild("events")
                 if castEvent then
                     local cast = castEvent:FindFirstChild("cast")
                     if cast then
-                        cast:FireServer(100, 1) -- 100% power, type 1
+                        if autofarm.castMode == 1 then
+                            -- Mode 1: Legit - consistent good cast
+                            local power = math.random(85, 95) -- Realistic power range
+                            local accuracy = 1 -- Good accuracy
+                            cast:FireServer(power, accuracy)
+                            
+                        elseif autofarm.castMode == 2 then
+                            -- Mode 2: Rage - maximum power always
+                            cast:FireServer(100, 1) -- 100% power, perfect accuracy
+                            
+                        elseif autofarm.castMode == 3 then
+                            -- Mode 3: Random - legit but with random power
+                            local power = math.random(70, 100) -- Wide random range
+                            local accuracy = math.random(1, 1) -- Keep accuracy good
+                            cast:FireServer(power, accuracy)
+                        end
                     end
                 end
                 
@@ -47,7 +64,14 @@ function autofarm.startAutoCast()
                 warn("Auto Cast Error: " .. tostring(err))
             end
             
-            wait(0.1) -- Delay untuk mencegah spam
+            -- Different delays based on mode
+            if autofarm.castMode == 1 then
+                wait(math.random(0.15, 0.25)) -- Legit: human-like delay
+            elseif autofarm.castMode == 2 then
+                wait(0.1) -- Rage: fast casting
+            elseif autofarm.castMode == 3 then
+                wait(math.random(0.1, 0.3)) -- Random: random delay
+            end
         end
     end)
 end
@@ -236,20 +260,32 @@ function autofarm.setShakeMode(mode)
     end
 end
 
+function autofarm.setCastMode(mode)
+    if mode == 1 or mode == 2 or mode == 3 then
+        autofarm.castMode = mode
+        return true
+    else
+        warn("Invalid cast mode. Use 1 (legit), 2 (rage), or 3 (random)")
+        return false
+    end
+end
+
 function autofarm.getStatus()
     return {
         autoCast = autofarm.autoCastEnabled,
         autoShake = autofarm.autoShakeEnabled,
         autoReel = autofarm.autoReelEnabled,
         alwaysCatch = autofarm.alwaysCatchEnabled,
-        shakeMode = autofarm.shakeMode
+        shakeMode = autofarm.shakeMode,
+        castMode = autofarm.castMode
     }
 end
 
 -- Start all autofarm features
-function autofarm.startAll(shakeMode)
+function autofarm.startAll(shakeMode, castMode)
     shakeMode = shakeMode or 1
-    autofarm.startAutoCast()
+    castMode = castMode or 1
+    autofarm.startAutoCast(castMode)
     autofarm.startAutoShake(shakeMode)
     autofarm.startAutoReel()
     autofarm.startAlwaysCatch()
@@ -273,7 +309,7 @@ local function handleCharacterRespawn()
         local status = autofarm.getStatus()
         if status.autoCast or status.autoShake or status.autoReel or status.alwaysCatch then
             wait(2) -- Wait for character to load
-            if status.autoCast then autofarm.startAutoCast() end
+            if status.autoCast then autofarm.startAutoCast(status.castMode) end
             if status.autoShake then autofarm.startAutoShake(status.shakeMode) end
             if status.autoReel then autofarm.startAutoReel() end
             if status.alwaysCatch then autofarm.startAlwaysCatch() end
