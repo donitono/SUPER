@@ -1,7 +1,17 @@
 -- Ported full kinghub functionality to local fluent stub (offline)
 
-local ok, Fluent = pcall(require, 'fluent')
-if not ok then error('Failed to require fluent.lua stub: '.. tostring(Fluent)) end
+-- Load local fluent stub via HTTP (since require() expects ModuleScript instance in Roblox)
+local function _loadFluent()
+    local url = 'https://raw.githubusercontent.com/donitono/SUPER/main/fluent.lua'
+    local src = game:HttpGet(url)
+    local ret = loadstring(src)()
+    if type(ret) ~= 'table' or not ret.Library then
+        error('Unexpected fluent.lua return value')
+    end
+    return ret
+end
+local ok, Fluent = pcall(_loadFluent)
+if not ok then error('Failed to load fluent.lua stub: ' .. tostring(Fluent)) end
 
 local Library, ThemeManager, SaveManager = Fluent.Library, Fluent.ThemeManager, Fluent.SaveManager
 local Options, Toggles = Fluent.Options, Fluent.Toggles
