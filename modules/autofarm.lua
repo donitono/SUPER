@@ -295,8 +295,166 @@ function autofarm.stopAutoShake()
     print("Auto Shake stopped")
 end
 
--- Auto Reel (dari sanhub)
-function autofarm.startAutoReel()
+-- Auto Reel States
+autofarm.autoReelEnabled = false
+autofarm.reelMode = 1 -- 1 = legit (follow fish), 2 = instant (perfect)
+
+-- Auto Reel stop function
+function autofarm.stopAutoReel()
+    autofarm.autoReelEnabled = false
+    print("Auto Reel stopped")
+end
+    autofarm.autoReelEnabled = true
+    autofarm.reelMode = mode or 1
+    
+    spawn(function()
+        while autofarm.autoReelEnabled do
+            local success, err = pcall(function()
+                local playerGui = player:WaitForChild("PlayerGui")
+                local reel = playerGui:FindFirstChild("reel")
+                
+                if reel and reel.Visible then
+                    if autofarm.reelMode == 1 then
+                        -- Mode 1: Legit - Adaptive follow fish line dengan deteksi rod speed/size
+                        local fish = reel:FindFirstChild("fish")
+                        local playerbar = reel:FindFirstChild("playerbar") 
+                        local bar = reel:FindFirstChild("bar") -- Progress bar
+                        
+                        if fish and playerbar and bar then
+                            -- Get fish position (garis hitam)
+                            local fishX = fish.Position.X.Scale
+                            local fishY = fish.Position.Y.Scale
+                            
+                            -- Get current playerbar position dan size
+                            local currentPlayerX = playerbar.Position.X.Scale
+                            local playerBarSize = playerbar.Size.X.Scale -- Deteksi panjang bar putih
+                            
+                            -- Calculate target position - SELALU KE TENGAH bar putih
+                            local playerBarCenter = currentPlayerX + (playerBarSize / 2)
+                            local targetX = fishX - (playerBarSize / 2) -- Posisi agar fish di tengah bar
+                            
+                            -- Adaptive speed berdasarkan rod characteristics
+                            local diff = targetX - currentPlayerX
+                            local distance = math.abs(diff)
+                            
+                            -- Dynamic speed adjustment berdasarkan:
+                            -- 1. Jarak ke target (semakin jauh = semakin cepat)
+                            -- 2. Ukuran player bar (bar kecil = lebih responsif)
+                            -- 3. Detection pergerakan fish yang cepat
+                            local baseSpeed = 0.3 -- Base responsiveness
+                            local distanceMultiplier = math.min(distance * 2, 1) -- Max 2x speed untuk jarak jauh
+                            local sizeMultiplier = math.max(0.5, 1 - playerBarSize) -- Bar kecil = lebih cepat
+                            local adaptiveSpeed = baseSpeed * distanceMultiplier * sizeMultiplier
+                            
+                            -- Calculate movement step dengan adaptive speed
+                            local moveStep = math.clamp(diff * adaptiveSpeed, -0.05, 0.05) -- Max 5% per frame
+                            
+                            -- Emergency fast correction untuk pergerakan fish yang sangat cepat
+                            if distance > 0.15 then -- Jika fish bergerak > 15% dalam 1 frame
+                                moveStep = math.clamp(diff * 0.8, -0.08, 0.08) -- Fast catch-up
+                            end
+                            
+                            local newX = currentPlayerX + moveStep
+                            
+                            -- Clamp position agar tidak keluar bounds
+                            newX = math.clamp(newX, 0, 1 - playerBarSize)
+                            
+                            -- Update playerbar position untuk center fish di bar putih
+                            playerbar.Position = UDim2.new(newX, 0, playerbar.Position.Y.Scale, 0)
+                            
+                            -- Check if fish line berada di TENGAH player zone (perfect centering)
+                            local newPlayerCenter = newX + (playerBarSize / 2)
+                            local centerDistance = math.abs(fishX - newPlayerCenter)
+                            local tolerance = playerBarSize * 0.3 -- 30% dari lebar bar sebagai tolerance
+                            local overlap = centerDistance < tolerance
+                            
+                            -- Additional success detection - fish berada dalam bar area
+                            local fishInBar = fishX >= newX and fishX <= (newX + playerBarSize)
+                            
+                            if overlap and fishInBar then
+                                -- Perfect positioning - fish di tengah bar putih
+                                local VirtualInputManager = game:GetService("VirtualInputManager")
+                                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, player, 0)
+                                wait(0.03)
+                                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, player, 0)
+                            end
+                            
+                            -- Debug info dengan rod characteristics
+                            local rodInfo = string.format(
+                                "Rod Speed=%.1f, Bar Size=%.0f%%, Fish=%.0f%%, Center=%.0f%%, Distance=%.1f%%, InBar=%s",
+                                adaptiveSpeed, playerBarSize*100, fishX*100, newPlayerCenter*100, centerDistance*100, tostring(fishInBar)
+                            )
+                            print("Auto Reel Adaptive: " .. rodInfo)
+                        end
+                        
+                    elseif autofarm.reelMode == 2 then
+                        -- Mode 2: Instant - Perfect reel (seperti implementasi lama)
+                        local bar = reel:FindFirstChild("bar")
+                        if bar and bar.Visible then
+                            -- Auto reel ketika bar muncul
+                            local reelEvent = ReplicatedStorage:FindFirstChild("events")
+                            if reelEvent then
+                                local reelAction = reelEvent:FindFirstChild("reelfinished")
+                                if reelAction then
+                                    reelAction:FireServer(100, true) -- Perfect reel
+                                    print("Auto Reel Instant: Perfect reel applied!")
+                                end
+                            end
+                            
+                            -- Alternative method - simulate space key press
+                            UserInputService:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+                            wait(0.05)
+                            UserInputService:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+                        end
+                    end
+                end
+                
+                -- Backup method - check for reel prompt
+                local reelPrompt = playerGui:FindFirstChild("ReelPrompt")
+                if reelPrompt and reelPrompt.Visible then
+                    local reelEvent = ReplicatedStorage:FindFirstChild("events")
+                    if reelEvent then
+                        local reel = reelEvent:FindFirstChild("reel")
+                        if reel then
+                            reel:FireServer()
+                        end
+                    end
+                end
+            end)
+            
+            if not success then
+                warn("Auto Reel Error: " .. tostring(err))
+            end
+            
+            -- Adaptive delay berdasarkan rod characteristics
+            if autofarm.reelMode == 1 then
+                -- Dynamic delay berdasarkan deteksi speed rod
+                local playerGui = player:WaitForChild("PlayerGui")
+                local reel = playerGui:FindFirstChild("reel")
+                if reel then
+                    local playerbar = reel:FindFirstChild("playerbar")
+                    if playerbar then
+                        local barSize = playerbar.Size.X.Scale
+                        -- Rod dengan bar kecil = pergerakan cepat = delay lebih kecil
+                        if barSize < 0.15 then
+                            wait(0.01) -- Very fast rod (small bar)
+                        elseif barSize < 0.25 then
+                            wait(0.015) -- Fast rod
+                        else
+                            wait(0.02) -- Normal/slow rod
+                        end
+                    else
+                        wait(0.02) -- Default
+                    end
+                else
+                    wait(0.02) -- Default when no reel UI
+                end
+            else
+                wait(0.1) -- Normal delay untuk instant mode
+            end
+        end
+    end)
+end
     autofarm.autoReelEnabled = true
     
     spawn(function()

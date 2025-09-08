@@ -72,15 +72,33 @@ AutofarmSection:NewToggle("Auto Shake", "Automatically shake when needed", funct
 end)
 
 -- Auto Reel
-AutofarmSection:NewToggle("Auto Reel", "Automatically reel in fish", function(state)
-    if state then
-        autofarm.startAutoReel()
-        print("Auto Reel: Enabled")
-    else
-        autofarm.stopAutoReel()
-        print("Auto Reel: Disabled")
-    end
-end)
+AutofarmTab:CreateDropdown({
+   Name = "Auto Reel Mode",
+   Options = {"Legit (Follow Fish)", "Instant (Perfect)"},
+   CurrentOption = "Legit (Follow Fish)",
+   Callback = function(Option)
+       local selectedMode = 1
+       if Option == "Instant (Perfect)" then
+           selectedMode = 2
+       end
+       autofarm.reelMode = selectedMode
+       print("Auto Reel mode set to: " .. Option)
+   end,
+})
+
+AutofarmTab:CreateToggle({
+   Name = "Auto Reel",
+   CurrentValue = false,
+   Callback = function(Value)
+       if Value then
+           autofarm.startAutoReel(autofarm.reelMode)
+           print("Auto Reel started in mode: " .. (autofarm.reelMode == 1 and "Legit" or "Instant"))
+       else
+           autofarm.stopAutoReel()
+           print("Auto Reel stopped")
+       end
+   end,
+})
 
 -- Always Catch (dari sanhub)
 AutofarmSection:NewToggle("Always Catch", "Never miss a fish - perfect catch every time", function(state)
