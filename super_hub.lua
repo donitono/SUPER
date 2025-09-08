@@ -344,11 +344,11 @@ local function setupAutoReel()
                     end
                     
                 elseif Config.AutoReel.mode == "Normal" then
-                    -- Normal mode - follow the white bar and keep within bounds
+                    -- Normal mode - control white bar to keep black bar inside (tap = right, no tap = left)
                     local foundBar = false
                     local connection
-                    local hasStartedReeling = false
                     local startTime = tick()
+                    local isCurrentlyTapping = false
                     
                     local function findReelBars()
                         -- Look for reel minigame components
@@ -357,133 +357,211 @@ local function setupAutoReel()
                             GUI:FindFirstChild("Bar"),
                             GUI:FindFirstChild("safezone"),
                             GUI:FindFirstChild("reelbar"),
-                            GUI:FindFirstChild("minigame")
+                            GUI:FindFirstChild("minigame"),
+                            GUI -- Also check the main GUI itself
                         }
                         
                         for _, container in pairs(possibleContainers) do
                             if container then
-                                -- Look for the white progress bar and safe zone
+                                -- Look for white progress bar (the one we control)
                                 local whiteBar = container:FindFirstChild("playerbar") or 
                                                container:FindFirstChild("whitebar") or
                                                container:FindFirstChild("progress") or
-                                               container:FindFirstChild("fill")
+                                               container:FindFirstChild("fill") or
+                                               container:FindFirstChild("white")
                                                
-                                local safeZone = container:FindFirstChild("safezone") or
+                                -- Look for black target bar (the one we need to keep inside)
+                                local blackBar = container:FindFirstChild("safezone") or
                                                container:FindFirstChild("safe") or
                                                container:FindFirstChild("target") or
-                                               container:FindFirstChild("zone")
+                                               container:FindFirstChild("zone") or
+                                               container:FindFirstChild("black")
                                 
-                                if whiteBar then
-                                    return whiteBar, safeZone, container
+                                if whiteBar and blackBar then
+                                    return whiteBar, blackBar, container
+                                elseif whiteBar then
+                                    -- Search for black bar in other containers
+                                    for _, subContainer in pairs(possibleContainers) do
+                                        if subContainer and subContainer ~= container then
+                                            local blackBar2 = subContainer:FindFirstChild("safezone") or
+                                                            subContainer:FindFirstChild("safe") or
+                                                            subContainer:FindFirstChild("target") or
+                                                            subContainer:FindFirstChild("zone") or
+                                                            subContainer:FindFirstChild("black")
+                                            if blackBar2 then
+                                                return whiteBar, blackBar2, container
+                                            end
+                                        end
+                                    end
+                                    return whiteBar, nil, container
                                 end
                             end
                         end
                         return nil, nil, nil
                     end
                     
-                    local whiteBar, safeZone, container = findReelBars()
+                    local whiteBar, blackBar, container = findReelBars()
                     
                     if whiteBar then
                         foundBar = true
-                        print("Found white bar:", whiteBar.Name, "in container:", container.Name)
+                        print("Normal mode - Found white bar:", whiteBar.Name)
+                        if blackBar then
+                            print("Found black target bar:", blackBar.Name)
+                        else
+                            print("Black bar not found, using position-based control")
+                        end
+                        
+                        -- Mouse input functions for controlling white bar
+                        local function startTapping()
+                            if not isCurrentlyTapping then
+                                isCurrentlyTapping = true
+                                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, LocalPlayer, 0)
+                            end
+                        end
+                        
+                        local function stopTapping()
+                            if isCurrentlyTapping then
+                                isCurrentlyTapping = false
+                                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, LocalPlayer, 0)
+                            end
+                        end
                         
                         connection = RunService.Heartbeat:Connect(function()
                             if GUI.Parent == nil then
+                                stopTapping()
                                 connection:Disconnect()
                                 return
                             end
                             
-                            -- Get white bar position and size
-                            local whiteBarProgress = 0
+                            -- Get white bar metrics
                             local whiteBarPosition = 0
-                            
-                            if whiteBar.Size and whiteBar.Size.X.Scale then
-                                whiteBarProgress = whiteBar.Size.X.Scale
-                            end
+                            local whiteBarSize = 0
+                            local whiteBarProgress = 0
                             
                             if whiteBar.Position and whiteBar.Position.X.Scale then
                                 whiteBarPosition = whiteBar.Position.X.Scale
                             end
                             
-                            -- Debug white bar info
-                            if Config.General.debugMode then
-                                print("White Bar - Progress:", whiteBarProgress, "Position:", whiteBarPosition)
+                            if whiteBar.Size and whiteBar.Size.X.Scale then
+                                whiteBarSize = whiteBar.Size.X.Scale
+                                whiteBarProgress = whiteBarSize
                             end
                             
-                            -- Check if we need to reel (when white bar is in safe zone or moving)
-                            local shouldReel = false
+                            -- Calculate white bar boundaries
+                            local whiteBarStart = whiteBarPosition
+                            local whiteBarEnd = whiteBarPosition + whiteBarSize
                             
-                            if safeZone then
-                                -- Check if white bar overlaps with safe zone
-                                local safeZonePos = safeZone.Position.X.Scale or 0
-                                local safeZoneSize = safeZone.Size.X.Scale or 0
-                                local safeZoneEnd = safeZonePos + safeZoneSize
-                                
-                                -- White bar is in safe zone
-                                if whiteBarPosition >= safeZonePos and whiteBarPosition <= safeZoneEnd then
-                                    shouldReel = true
+                            -- Get black bar position (target we need to keep inside white bar)
+                            local blackBarPosition = 0.5 -- Default center
+                            local blackBarSize = 0.1 -- Default small size
+                            
+                            if blackBar then
+                                if blackBar.Position and blackBar.Position.X.Scale then
+                                    blackBarPosition = blackBar.Position.X.Scale
                                 end
-                                
-                                if Config.General.debugMode then
-                                    print("Safe Zone - Pos:", safeZonePos, "Size:", safeZoneSize, "Should Reel:", shouldReel)
+                                if blackBar.Size and blackBar.Size.X.Scale then
+                                    blackBarSize = blackBar.Size.X.Scale
+                                end
+                            end
+                            
+                            -- Calculate black bar center
+                            local blackBarCenter = blackBarPosition + (blackBarSize / 2)
+                            
+                            -- Debug info
+                            if Config.General.debugMode then
+                                print(string.format("White: %.3f-%.3f | Black Center: %.3f | Tapping: %s", 
+                                    whiteBarStart, whiteBarEnd, blackBarCenter, tostring(isCurrentlyTapping)))
+                            end
+                            
+                            -- Control logic: keep black bar inside white bar
+                            -- tap = white bar moves right, no tap = white bar moves left
+                            local shouldTap = false
+                            
+                            if blackBar then
+                                -- If black bar is to the left of white bar, tap to move white bar right
+                                if blackBarCenter < whiteBarStart + 0.05 then
+                                    shouldTap = true
+                                -- If black bar is to the right of white bar, don't tap to move white bar left  
+                                elseif blackBarCenter > whiteBarEnd - 0.05 then
+                                    shouldTap = false
+                                -- If black bar is inside white bar, maintain position with fine control
+                                else
+                                    local relativePosition = (blackBarCenter - whiteBarStart) / whiteBarSize
+                                    -- Keep black bar in center area of white bar
+                                    if relativePosition < 0.3 then
+                                        shouldTap = true -- Move white bar right
+                                    elseif relativePosition > 0.7 then
+                                        shouldTap = false -- Move white bar left
+                                    else
+                                        -- In good position, make small adjustments
+                                        shouldTap = isCurrentlyTapping -- Maintain current state
+                                    end
                                 end
                             else
-                                -- No safe zone found, reel based on progress
-                                shouldReel = whiteBarProgress > 0.3 and whiteBarProgress < 0.9
-                            end
-                            
-                            -- Start reeling when conditions are met
-                            if shouldReel and not hasStartedReeling then
-                                hasStartedReeling = true
-                                task.wait(currentDelay)
-                                print("Started reeling - white bar in position")
-                            end
-                            
-                            -- Complete when white bar reaches good position or timeout
-                            if hasStartedReeling then
-                                local completionCondition = false
-                                
-                                if safeZone then
-                                    -- Complete when white bar has been in safe zone for a while
-                                    completionCondition = shouldReel and whiteBarProgress > 0.6
+                                -- No black bar detected, use simple oscillation
+                                if whiteBarPosition < 0.2 then
+                                    shouldTap = true
+                                elseif whiteBarPosition > 0.6 then
+                                    shouldTap = false
                                 else
-                                    -- Complete based on progress only
-                                    completionCondition = whiteBarProgress > 0.7
+                                    shouldTap = math.random() > 0.5
                                 end
-                                
-                                -- Add randomness for human-like behavior
-                                local randomFactor = math.random(70, 95) / 100 -- 70-95%
-                                
-                                if completionCondition and whiteBarProgress >= randomFactor then
-                                    if ReplicatedStorage:WaitForChild("events"):WaitForChild("reelfinished") ~= nil then
-                                        ReplicatedStorage.events.reelfinished:FireServer(100, false)
-                                        connection:Disconnect()
-                                        print("Reel completed - white bar at:", whiteBarProgress)
-                                    end
+                            end
+                            
+                            -- Apply tapping decision
+                            if shouldTap then
+                                startTapping()
+                            else
+                                stopTapping()
+                            end
+                            
+                            -- Completion logic
+                            local completionCondition = false
+                            
+                            if blackBar then
+                                -- Complete when black bar has been well-positioned inside white bar
+                                local isWellPositioned = blackBarCenter >= whiteBarStart + 0.1 and 
+                                                       blackBarCenter <= whiteBarEnd - 0.1
+                                completionCondition = isWellPositioned and whiteBarProgress > 0.6
+                            else
+                                -- Complete based on progress only
+                                completionCondition = whiteBarProgress > 0.7
+                            end
+                            
+                            -- Add human-like randomness
+                            local randomFactor = math.random(70, 90) / 100
+                            
+                            if completionCondition and whiteBarProgress >= randomFactor then
+                                stopTapping()
+                                if ReplicatedStorage:WaitForChild("events"):WaitForChild("reelfinished") ~= nil then
+                                    ReplicatedStorage.events.reelfinished:FireServer(100, false)
+                                    connection:Disconnect()
+                                    print("Normal reel completed - black bar kept inside white bar")
                                 end
                             end
                             
                             -- Timeout protection
-                            if tick() - startTime > 10 then
+                            if tick() - startTime > 12 then
+                                stopTapping()
                                 if ReplicatedStorage:WaitForChild("events"):WaitForChild("reelfinished") ~= nil then
                                     ReplicatedStorage.events.reelfinished:FireServer(100, false)
                                     connection:Disconnect()
-                                    print("Reel completed - timeout protection")
+                                    print("Normal reel completed - timeout")
                                 end
                             end
                         end)
                     else
-                        print("No white bar found for reel minigame")
+                        print("No bars found for reel minigame")
                     end
                     
-                    -- Enhanced fallback method with better timing
+                    -- Fallback method
                     if not foundBar then
                         spawn(function()
-                            local waitTime = currentDelay + math.random(2, 4) -- 2-6 seconds random
+                            local waitTime = currentDelay + math.random(2, 4)
                             task.wait(waitTime)
                             if GUI.Parent ~= nil and ReplicatedStorage:WaitForChild("events"):WaitForChild("reelfinished") ~= nil then
                                 ReplicatedStorage.events.reelfinished:FireServer(100, false)
-                                print("Fallback reel completed after", waitTime, "seconds")
+                                print("Normal mode fallback completed")
                             end
                         end)
                     end
