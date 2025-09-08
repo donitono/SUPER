@@ -18,6 +18,7 @@ local humanoid = character:WaitForChild("Humanoid")
 autofarm.autoCastEnabled = false
 autofarm.autoShakeEnabled = false
 autofarm.autoReelEnabled = false
+autofarm.alwaysCatchEnabled = false
 autofarm.shakeMode = 1 -- 1 = sanhub method, 2 = neoxhub method
 
 -- Auto Cast (dari kinghub dengan metodenya)
@@ -177,6 +178,53 @@ function autofarm.stopAutoReel()
     autofarm.autoReelEnabled = false
 end
 
+-- Always Catch (dari sanhub)
+function autofarm.startAlwaysCatch()
+    autofarm.alwaysCatchEnabled = true
+    
+    spawn(function()
+        -- Hook reelfinished event untuk always catch
+        local replicatedStorage = ReplicatedStorage
+        local events = replicatedStorage:WaitForChild("events")
+        local reelfinished = events:WaitForChild("reelfinished")
+        
+        -- Store original FireServer method
+        local originalFireServer = reelfinished.FireServer
+        
+        -- Override FireServer method
+        reelfinished.FireServer = function(self, ...)
+            local args = {...}
+            if autofarm.alwaysCatchEnabled then
+                -- Always catch dengan perfect score
+                args[1] = 100  -- Perfect score
+                args[2] = true -- Success flag
+                print("Always Catch: Perfect catch applied!")
+            end
+            return originalFireServer(self, unpack(args))
+        end
+        
+        print("Always Catch: Hook installed successfully!")
+    end)
+end
+
+function autofarm.stopAlwaysCatch()
+    autofarm.alwaysCatchEnabled = false
+    
+    -- Restore original FireServer method
+    spawn(function()
+        local replicatedStorage = ReplicatedStorage
+        local events = replicatedStorage:FindFirstChild("events")
+        if events then
+            local reelfinished = events:FindFirstChild("reelfinished")
+            if reelfinished then
+                -- Note: Dalam implementasi nyata, kita perlu store original method
+                -- Untuk sekarang, kita hanya disable flag
+                print("Always Catch: Disabled")
+            end
+        end
+    end)
+end
+
 -- Utility Functions
 function autofarm.setShakeMode(mode)
     if mode == 1 or mode == 2 then
@@ -193,6 +241,7 @@ function autofarm.getStatus()
         autoCast = autofarm.autoCastEnabled,
         autoShake = autofarm.autoShakeEnabled,
         autoReel = autofarm.autoReelEnabled,
+        alwaysCatch = autofarm.alwaysCatchEnabled,
         shakeMode = autofarm.shakeMode
     }
 end
@@ -203,6 +252,7 @@ function autofarm.startAll(shakeMode)
     autofarm.startAutoCast()
     autofarm.startAutoShake(shakeMode)
     autofarm.startAutoReel()
+    autofarm.startAlwaysCatch()
 end
 
 -- Stop all autofarm features
@@ -210,6 +260,7 @@ function autofarm.stopAll()
     autofarm.stopAutoCast()
     autofarm.stopAutoShake()
     autofarm.stopAutoReel()
+    autofarm.stopAlwaysCatch()
 end
 
 -- Error handling dan reconnection
@@ -220,11 +271,12 @@ local function handleCharacterRespawn()
         
         -- Restart autofarm jika sedang aktif
         local status = autofarm.getStatus()
-        if status.autoCast or status.autoShake or status.autoReel then
+        if status.autoCast or status.autoShake or status.autoReel or status.alwaysCatch then
             wait(2) -- Wait for character to load
             if status.autoCast then autofarm.startAutoCast() end
             if status.autoShake then autofarm.startAutoShake(status.shakeMode) end
             if status.autoReel then autofarm.startAutoReel() end
+            if status.alwaysCatch then autofarm.startAlwaysCatch() end
         end
     end)
 end

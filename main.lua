@@ -2,19 +2,8 @@
 -- Load modules dan UI menggunakan Kavo Library
 -- Dapat diakses secara online
 
-print("Loading SUPER HUB...")
-
 -- Load Kavo Library (dari repository kita sendiri)
-local Library
-local success, err = pcall(function()
-    Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/donitono/SUPER/main/kavo.lua"))()
-end)
-
-if not success then
-    error("Failed to load Kavo Library: " .. tostring(err))
-end
-
-print("Kavo Library loaded successfully!")
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/donitono/SUPER/main/kavo.lua"))()
 
 -- Services
 local Players = game:GetService("Players")
@@ -24,27 +13,12 @@ local TweenService = game:GetService("TweenService")
 -- Variables
 local player = Players.LocalPlayer
 
--- Load Autofarm Module (dari repository kita sendiri)
-local autofarm
-local autofarmSuccess, autofarmErr = pcall(function()
-    autofarm = loadstring(game:HttpGet("https://raw.githubusercontent.com/donitono/SUPER/main/modules/autofarm.lua"))()
-end)
-
-if not autofarmSuccess then
-    warn("Failed to load Autofarm module: " .. tostring(autofarmErr))
-    warn("Autofarm features will not be available")
-end
-
-print("Modules loaded!")
+-- Load Modules (dari repository kita sendiri)
+local autofarm = loadstring(game:HttpGet("https://raw.githubusercontent.com/donitono/SUPER/main/modules/autofarm.lua"))()
+-- teleports dan player modules akan dibuat nanti, sementara pakai fallback methods
 
 -- Create Main Window
-local Window
-if Library then
-    Window = Library.CreateLib("SUPER HUB v1.0", "DarkTheme")
-    print("UI Window created!")
-else
-    error("Kavo Library not loaded properly")
-end
+local Window = Library.CreateLib("SUPER HUB v1.0", "DarkTheme")
 
 -- Autofarm Tab
 local AutofarmTab = Window:NewTab("🎣 Autofarm")
@@ -52,61 +26,56 @@ local AutofarmSection = AutofarmTab:NewSection("Fishing Automation")
 
 -- Auto Cast
 AutofarmSection:NewToggle("Auto Cast", "Automatically cast fishing rod", function(state)
-    if autofarm then
-        if state then
-            autofarm.startAutoCast()
-            print("Auto Cast: Enabled")
-        else
-            autofarm.stopAutoCast()
-            print("Auto Cast: Disabled")
-        end
+    if state then
+        autofarm.startAutoCast()
+        print("Auto Cast: Enabled")
     else
-        warn("Autofarm module not loaded!")
+        autofarm.stopAutoCast()
+        print("Auto Cast: Disabled")
     end
 end)
 
 -- Auto Shake dengan Mode Selection
 local currentShakeMode = 1
 AutofarmSection:NewDropdown("Shake Mode", "Select auto shake mode", {"Mode 1 (SanHub)", "Mode 2 (NeoxHub)"}, function(option)
-    if autofarm then
-        if option == "Mode 1 (SanHub)" then
-            currentShakeMode = 1
-        elseif option == "Mode 2 (NeoxHub)" then
-            currentShakeMode = 2
-        end
-        autofarm.setShakeMode(currentShakeMode)
-        print("Shake Mode changed to: " .. currentShakeMode)
-    else
-        warn("Autofarm module not loaded!")
+    if option == "Mode 1 (SanHub)" then
+        currentShakeMode = 1
+    elseif option == "Mode 2 (NeoxHub)" then
+        currentShakeMode = 2
     end
+    autofarm.setShakeMode(currentShakeMode)
+    print("Shake Mode changed to: " .. currentShakeMode)
 end)
 
 AutofarmSection:NewToggle("Auto Shake", "Automatically shake when needed", function(state)
-    if autofarm then
-        if state then
-            autofarm.startAutoShake(currentShakeMode)
-            print("Auto Shake: Enabled (Mode " .. currentShakeMode .. ")")
-        else
-            autofarm.stopAutoShake()
-            print("Auto Shake: Disabled")
-        end
+    if state then
+        autofarm.startAutoShake(currentShakeMode)
+        print("Auto Shake: Enabled (Mode " .. currentShakeMode .. ")")
     else
-        warn("Autofarm module not loaded!")
+        autofarm.stopAutoShake()
+        print("Auto Shake: Disabled")
     end
 end)
 
 -- Auto Reel
 AutofarmSection:NewToggle("Auto Reel", "Automatically reel in fish", function(state)
-    if autofarm then
-        if state then
-            autofarm.startAutoReel()
-            print("Auto Reel: Enabled")
-        else
-            autofarm.stopAutoReel()
-            print("Auto Reel: Disabled")
-        end
+    if state then
+        autofarm.startAutoReel()
+        print("Auto Reel: Enabled")
     else
-        warn("Autofarm module not loaded!")
+        autofarm.stopAutoReel()
+        print("Auto Reel: Disabled")
+    end
+end)
+
+-- Always Catch (dari sanhub)
+AutofarmSection:NewToggle("Always Catch", "Never miss a fish - perfect catch every time", function(state)
+    if state then
+        autofarm.startAlwaysCatch()
+        print("Always Catch: Enabled")
+    else
+        autofarm.stopAlwaysCatch()
+        print("Always Catch: Disabled")
     end
 end)
 
@@ -114,35 +83,24 @@ end)
 local QuickSection = AutofarmTab:NewSection("Quick Actions")
 
 QuickSection:NewButton("Start All Autofarm", "Enable all autofarm features", function()
-    if autofarm then
-        autofarm.startAll(currentShakeMode)
-        print("All Autofarm Features: Enabled")
-    else
-        warn("Autofarm module not loaded!")
-    end
+    autofarm.startAll(currentShakeMode)
+    print("All Autofarm Features: Enabled")
 end)
 
 QuickSection:NewButton("Stop All Autofarm", "Disable all autofarm features", function()
-    if autofarm then
-        autofarm.stopAll()
-        print("All Autofarm Features: Disabled")
-    else
-        warn("Autofarm module not loaded!")
-    end
+    autofarm.stopAll()
+    print("All Autofarm Features: Disabled")
 end)
 
 QuickSection:NewButton("Check Status", "Show current autofarm status", function()
-    if autofarm then
-        local status = autofarm.getStatus()
-        print("=== Autofarm Status ===")
-        print("Auto Cast: " .. tostring(status.autoCast))
-        print("Auto Shake: " .. tostring(status.autoShake))
-        print("Auto Reel: " .. tostring(status.autoReel))
-        print("Shake Mode: " .. tostring(status.shakeMode))
-        print("=====================")
-    else
-        warn("Autofarm module not loaded!")
-    end
+    local status = autofarm.getStatus()
+    print("=== Autofarm Status ===")
+    print("Auto Cast: " .. tostring(status.autoCast))
+    print("Auto Shake: " .. tostring(status.autoShake))
+    print("Auto Reel: " .. tostring(status.autoReel))
+    print("Always Catch: " .. tostring(status.alwaysCatch))
+    print("Shake Mode: " .. tostring(status.shakeMode))
+    print("=====================")
 end)
 
 -- Player Tab
@@ -270,25 +228,6 @@ MiscSection:NewToggle("Perfect Cast", "Always perfect cast", function(state)
                     local oldFireServer = cast.FireServer
                     cast.FireServer = function(self, power, accuracy)
                         return oldFireServer(self, 100, 1) -- Perfect cast
-                    end
-                end
-            end
-            wait(1)
-        end
-    end)
-end)
-
-MiscSection:NewToggle("Always Catch", "Never miss a fish", function(state)
-    spawn(function()
-        while state do
-            local catchEvent = ReplicatedStorage:FindFirstChild("events")
-            if catchEvent then
-                local catch = catchEvent:FindFirstChild("catch")
-                if catch then
-                    -- Override catch dengan success
-                    local oldFireServer = catch.FireServer
-                    catch.FireServer = function(self, ...)
-                        return oldFireServer(self, true, 100) -- Always successful catch
                     end
                 end
             end
