@@ -14,7 +14,7 @@ local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 
 -- Load Modules (dari repository kita sendiri)
-local autofarm = loadstring(game:HttpGet("https://raw.githubusercontent.com/donitono/SUPER/main/modules/autofarm.lua"))()
+local autofarm = loadstring(game:HttpGet("https://raw.githubusercontent.com/donitono/SUPER/main/modules/autofarm_simple.lua"))()
 -- teleports dan player modules akan dibuat nanti, sementara pakai fallback methods
 
 -- Create Main Window
