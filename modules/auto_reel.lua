@@ -15,6 +15,8 @@ local reelConnection
 local reelGui
 local fishBar
 local playerBar
+local reelStartTime = 0
+local hasInitializedPosition = false
 
 -- UI Elements
 local screenGui
@@ -255,14 +257,38 @@ local function holdAction()
     end)
 end
 
+-- Strong hold for initial centering
+local function strongHoldAction()
+    -- Multiple quick holds for strong movement to center
+    for i = 1, 2 do
+        pcall(function()
+            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+            wait(0.1)
+            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+            wait(0.02)
+        end)
+    end
+end
+
 -- Auto reel logic
 local function autoReelLogic()
     if not isAutoReelEnabled then return end
     
     if not findReelElements() then
         statusLabel.Text = "Status: No reel detected"
+        hasInitializedPosition = false
         return
     end
+    
+    -- Check if this is a new reel session
+    if not hasInitializedPosition then
+        reelStartTime = tick()
+        hasInitializedPosition = true
+        statusLabel.Text = "Status: Initializing..."
+    end
+    
+    local currentTime = tick()
+    local timeSinceStart = currentTime - reelStartTime
     
     local fishPos = getFishPosition()
     local playerPos = getPlayerBarPosition()
@@ -271,12 +297,34 @@ local function autoReelLogic()
     -- Update debug info
     local debugLabel = screenGui.MainFrame:FindFirstChild("DebugLabel")
     if debugLabel then
-        debugLabel.Text = string.format("F:%.2f P:%.2f D:%.2f", fishPos, playerPos, difference)
+        debugLabel.Text = string.format("F:%.2f P:%.2f D:%.2f T:%.1f", fishPos, playerPos, difference, timeSinceStart)
     end
     
-    -- Improved control logic based on natural physics
-    -- Bar naturally drifts left, so we only need to input when fish is to the right
+    -- Initial positioning phase (first 1.5 seconds)
+    if timeSinceStart < 1.5 then
+        -- Try to maintain center position during startup
+        local centerTarget = 0.5
+        local centerDifference = centerTarget - playerPos
+        
+        if centerDifference > 0.15 then
+            -- Far from center, use strong hold
+            strongHoldAction()
+            statusLabel.Text = "Status: Strong Centering"
+        elseif centerDifference > 0.08 then
+            -- Moderately far from center
+            holdAction()
+            statusLabel.Text = "Status: Centering (Hold)"
+        elseif centerDifference > 0.03 then
+            -- Need to move right slightly to center
+            tapAction()
+            statusLabel.Text = "Status: Centering (Tap)"
+        else
+            statusLabel.Text = "Status: Centered, Ready"
+        end
+        return
+    end
     
+    -- Normal tracking phase
     local deadZone = 0.03 -- Small dead zone to prevent jittering
     
     if difference > deadZone then
@@ -340,6 +388,7 @@ function AutoReel.init()
     playerGui.ChildAdded:Connect(function(child)
         if child.Name == "reel" and isAutoReelEnabled then
             wait(0.5) -- Wait for reel GUI to fully load
+            hasInitializedPosition = false -- Reset for new reel session
             findReelElements()
         end
     end)
@@ -348,6 +397,7 @@ function AutoReel.init()
     playerGui.ChildRemoved:Connect(function(child)
         if child.Name == "reel" then
             statusLabel.Text = "Status: Reel ended"
+            hasInitializedPosition = false -- Reset when reel ends
         end
     end)
     
