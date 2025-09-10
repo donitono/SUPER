@@ -14,9 +14,6 @@ local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 
--- Load Simple Reel Module (more reliable)
-local Reel = loadstring(game:HttpGet("https://raw.githubusercontent.com/donitono/SUPER/main/modules/simple_reel.lua"))()
-
 -- Autofarm States
 autofarm.autoCastEnabled = false
 autofarm.autoShakeEnabled = false
@@ -306,27 +303,60 @@ function autofarm.stopAutoShake()
     print("Auto Shake stopped")
 end
 
--- Auto Reel (menggunakan Reel module yang advanced)
+-- Auto Reel (dari sanhub)
 function autofarm.startAutoReel()
     autofarm.autoReelEnabled = true
     
-    if Reel then
-        Reel.startAutoReel()
-        print("[AUTOFARM] ✅ Auto Reel Started (Simple Mode)")
-    else
-        print("[AUTOFARM] ❌ Reel module not available")
-    end
+    spawn(function()
+        while autofarm.autoReelEnabled do
+            local success, err = pcall(function()
+                -- Method dari sanhub
+                local playerGui = player:WaitForChild("PlayerGui")
+                local reel = playerGui:FindFirstChild("reel")
+                
+                if reel then
+                    local bar = reel:FindFirstChild("bar")
+                    if bar and bar.Visible then
+                        -- Auto reel ketika bar muncul
+                        local reelEvent = ReplicatedStorage:FindFirstChild("events")
+                        if reelEvent then
+                            local reelAction = reelEvent:FindFirstChild("reelfinished")
+                            if reelAction then
+                                reelAction:FireServer(100, true) -- Perfect reel
+                            end
+                        end
+                        
+                        -- Alternative method - simulate space key press
+                        UserInputService:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+                        wait(0.05)
+                        UserInputService:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+                    end
+                end
+                
+                -- Backup method - check for reel prompt
+                local reelPrompt = playerGui:FindFirstChild("ReelPrompt")
+                if reelPrompt and reelPrompt.Visible then
+                    local reelEvent = ReplicatedStorage:FindFirstChild("events")
+                    if reelEvent then
+                        local reel = reelEvent:FindFirstChild("reel")
+                        if reel then
+                            reel:FireServer()
+                        end
+                    end
+                end
+            end)
+            
+            if not success then
+                warn("Auto Reel Error: " .. tostring(err))
+            end
+            
+            wait(0.1)
+        end
+    end)
 end
 
 function autofarm.stopAutoReel()
     autofarm.autoReelEnabled = false
-    
-    -- Stop Reel module juga
-    if Reel then
-        Reel.stopAutoReel()
-    end
-    
-    print("[AUTOFARM] 🛑 Auto Reel Stopped")
 end
 
 -- Always Catch (dari sanhub)
