@@ -16,18 +16,8 @@ local player = Players.LocalPlayer
 -- Load Modules (dari repository kita sendiri)
 local autofarm = loadstring(game:HttpGet("https://raw.githubusercontent.com/donitono/SUPER/main/modules/autofarm.lua"))()
 
--- Load Reel Module with fallback
-local Reel
-local reelLoadSuccess = pcall(function()
-    Reel = loadstring(game:HttpGet("https://raw.githubusercontent.com/donitono/SUPER/main/modules/reel.lua"))()
-end)
-
-if not reelLoadSuccess or not Reel then
-    print("[MAIN] ⚠️ Advanced Reel failed to load, using Simple Reel...")
-    pcall(function()
-        Reel = loadstring(game:HttpGet("https://raw.githubusercontent.com/donitono/SUPER/main/modules/simple_reel.lua"))()
-    end)
-end
+-- Load Simple Reel (more reliable)
+local Reel = loadstring(game:HttpGet("https://raw.githubusercontent.com/donitono/SUPER/main/modules/simple_reel.lua"))()
 
 -- teleports dan player modules akan dibuat nanti, sementara pakai fallback methods
 

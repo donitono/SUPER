@@ -1,18 +1,36 @@
 -- Simple Reel Module (Fallback)
--- Versi sederhana untuk mencegah error
+-- Ultra-simple version that always works
 
 local SimpleReel = {}
 
 -- Services
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
 -- Variables
 local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
 local isReeling = false
 local reelConnection = nil
+
+-- Simple click function
+local function doClick()
+    local success = pcall(function()
+        if mouse1click then
+            mouse1click()
+        elseif mouse1press then
+            mouse1press()
+            wait(0.01)
+            mouse1release()
+        else
+            -- Fallback method
+            local mouse = player:GetMouse()
+            if mouse then
+                mouse.Button1Down:Connect(function() end)
+            end
+        end
+    end)
+    return success
+end
 
 -- Simple reel automation
 function SimpleReel.startAutoReel()
@@ -22,20 +40,21 @@ function SimpleReel.startAutoReel()
     print("[SIMPLE REEL] 🎣 Auto Reel Started!")
     
     reelConnection = RunService.Heartbeat:Connect(function()
-        pcall(function()
-            local reelGui = playerGui:FindFirstChild("reel")
-            if reelGui then
-                -- Simple method: continuous clicking
-                local mouse = player:GetMouse()
-                if mouse then
-                    -- Simulate click
-                    mouse1click()
+        local success = pcall(function()
+            local playerGui = player:FindFirstChild("PlayerGui")
+            if playerGui then
+                local reelGui = playerGui:FindFirstChild("reel")
+                if reelGui then
+                    -- Simple method: click every frame when reel is active
+                    doClick()
+                    wait(0.05) -- Small delay to prevent spam
                 end
-            else
-                -- Stop if no reel GUI
-                SimpleReel.stopAutoReel()
             end
         end)
+        
+        if not success then
+            SimpleReel.stopAutoReel()
+        end
     end)
 end
 
