@@ -18,6 +18,10 @@ local playerBar
 local reelStartTime = 0
 local hasInitializedPosition = false
 
+-- Sensitivity settings
+local tapSensitivity = 0.5 -- 0.1 to 1.0 (affects tap duration)
+local holdSensitivity = 0.5 -- 0.1 to 1.0 (affects hold duration)
+
 -- UI Elements
 local screenGui
 local mainFrame
@@ -36,8 +40,8 @@ local function createUI()
     -- Main Frame
     mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainFrame"
-    mainFrame.Size = UDim2.new(0, 250, 0, 120)
-    mainFrame.Position = UDim2.new(0.5, -125, 0.1, 0)
+    mainFrame.Size = UDim2.new(0, 280, 0, 200)
+    mainFrame.Position = UDim2.new(0.5, -140, 0.1, 0)
     mainFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
     mainFrame.BorderSizePixel = 0
     mainFrame.Parent = screenGui
@@ -68,8 +72,8 @@ local function createUI()
     -- Toggle Button
     toggleButton = Instance.new("TextButton")
     toggleButton.Name = "ToggleButton"
-    toggleButton.Size = UDim2.new(0.8, 0, 0, 35)
-    toggleButton.Position = UDim2.new(0.1, 0, 0.35, 0)
+    toggleButton.Size = UDim2.new(0.8, 0, 0, 30)
+    toggleButton.Position = UDim2.new(0.1, 0, 0.2, 0)
     toggleButton.BackgroundColor3 = Color3.fromRGB(220, 53, 69)
     toggleButton.BorderSizePixel = 0
     toggleButton.Text = "OFF"
@@ -83,11 +87,89 @@ local function createUI()
     toggleCorner.CornerRadius = UDim.new(0, 6)
     toggleCorner.Parent = toggleButton
     
+    -- Tap Sensitivity Label
+    local tapLabel = Instance.new("TextLabel")
+    tapLabel.Name = "TapLabel"
+    tapLabel.Size = UDim2.new(1, 0, 0, 20)
+    tapLabel.Position = UDim2.new(0, 0, 0.37, 0)
+    tapLabel.BackgroundTransparency = 1
+    tapLabel.Text = "Tap Sensitivity: 50%"
+    tapLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    tapLabel.TextScaled = true
+    tapLabel.Font = Enum.Font.Gotham
+    tapLabel.Parent = mainFrame
+    
+    -- Tap Sensitivity Slider Background
+    local tapSliderBg = Instance.new("Frame")
+    tapSliderBg.Name = "TapSliderBg"
+    tapSliderBg.Size = UDim2.new(0.8, 0, 0, 8)
+    tapSliderBg.Position = UDim2.new(0.1, 0, 0.47, 0)
+    tapSliderBg.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    tapSliderBg.BorderSizePixel = 0
+    tapSliderBg.Parent = mainFrame
+    
+    local tapSliderCorner = Instance.new("UICorner")
+    tapSliderCorner.CornerRadius = UDim.new(0, 4)
+    tapSliderCorner.Parent = tapSliderBg
+    
+    -- Tap Sensitivity Slider Handle
+    local tapSliderHandle = Instance.new("TextButton")
+    tapSliderHandle.Name = "TapSliderHandle"
+    tapSliderHandle.Size = UDim2.new(0, 16, 0, 16)
+    tapSliderHandle.Position = UDim2.new(0.5, -8, 0.5, -8)
+    tapSliderHandle.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+    tapSliderHandle.BorderSizePixel = 0
+    tapSliderHandle.Text = ""
+    tapSliderHandle.Parent = tapSliderBg
+    
+    local tapHandleCorner = Instance.new("UICorner")
+    tapHandleCorner.CornerRadius = UDim.new(0, 8)
+    tapHandleCorner.Parent = tapSliderHandle
+    
+    -- Hold Sensitivity Label
+    local holdLabel = Instance.new("TextLabel")
+    holdLabel.Name = "HoldLabel"
+    holdLabel.Size = UDim2.new(1, 0, 0, 20)
+    holdLabel.Position = UDim2.new(0, 0, 0.57, 0)
+    holdLabel.BackgroundTransparency = 1
+    holdLabel.Text = "Hold Sensitivity: 50%"
+    holdLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    holdLabel.TextScaled = true
+    holdLabel.Font = Enum.Font.Gotham
+    holdLabel.Parent = mainFrame
+    
+    -- Hold Sensitivity Slider Background
+    local holdSliderBg = Instance.new("Frame")
+    holdSliderBg.Name = "HoldSliderBg"
+    holdSliderBg.Size = UDim2.new(0.8, 0, 0, 8)
+    holdSliderBg.Position = UDim2.new(0.1, 0, 0.67, 0)
+    holdSliderBg.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    holdSliderBg.BorderSizePixel = 0
+    holdSliderBg.Parent = mainFrame
+    
+    local holdSliderCorner = Instance.new("UICorner")
+    holdSliderCorner.CornerRadius = UDim.new(0, 4)
+    holdSliderCorner.Parent = holdSliderBg
+    
+    -- Hold Sensitivity Slider Handle
+    local holdSliderHandle = Instance.new("TextButton")
+    holdSliderHandle.Name = "HoldSliderHandle"
+    holdSliderHandle.Size = UDim2.new(0, 16, 0, 16)
+    holdSliderHandle.Position = UDim2.new(0.5, -8, 0.5, -8)
+    holdSliderHandle.BackgroundColor3 = Color3.fromRGB(255, 100, 0)
+    holdSliderHandle.BorderSizePixel = 0
+    holdSliderHandle.Text = ""
+    holdSliderHandle.Parent = holdSliderBg
+    
+    local holdHandleCorner = Instance.new("UICorner")
+    holdHandleCorner.CornerRadius = UDim.new(0, 8)
+    holdHandleCorner.Parent = holdSliderHandle
+    
     -- Status Label
     statusLabel = Instance.new("TextLabel")
     statusLabel.Name = "StatusLabel"
-    statusLabel.Size = UDim2.new(1, 0, 0, 20)
-    statusLabel.Position = UDim2.new(0, 0, 0.7, 0)
+    statusLabel.Size = UDim2.new(1, 0, 0, 18)
+    statusLabel.Position = UDim2.new(0, 0, 0.77, 0)
     statusLabel.BackgroundTransparency = 1
     statusLabel.Text = "Status: Inactive"
     statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -99,7 +181,7 @@ local function createUI()
     local debugLabel = Instance.new("TextLabel")
     debugLabel.Name = "DebugLabel"
     debugLabel.Size = UDim2.new(1, 0, 0, 15)
-    debugLabel.Position = UDim2.new(0, 0, 0.87, 0)
+    debugLabel.Position = UDim2.new(0, 0, 0.88, 0)
     debugLabel.BackgroundTransparency = 1
     debugLabel.Text = "Debug: --"
     debugLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
@@ -130,6 +212,76 @@ local function createUI()
     mainFrame.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = false
+        end
+    end)
+    
+    -- Setup slider functionality
+    setupSliders(tapSliderHandle, tapSliderBg, tapLabel, "tap")
+    setupSliders(holdSliderHandle, holdSliderBg, holdLabel, "hold")
+end
+
+-- Setup slider functionality
+local function setupSliders(handle, background, label, sliderType)
+    local dragging = false
+    
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+        end
+    end)
+    
+    handle.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local bgPos = background.AbsolutePosition.X
+            local bgSize = background.AbsoluteSize.X
+            local mouseX = input.Position.X
+            
+            local relativeX = (mouseX - bgPos) / bgSize
+            relativeX = math.max(0, math.min(1, relativeX)) -- Clamp 0-1
+            
+            handle.Position = UDim2.new(relativeX, -8, 0.5, -8)
+            
+            local percentage = math.floor(relativeX * 100)
+            local value = 0.1 + (relativeX * 0.9) -- Convert to 0.1-1.0 range
+            
+            if sliderType == "tap" then
+                tapSensitivity = value
+                label.Text = "Tap Sensitivity: " .. percentage .. "%"
+            else
+                holdSensitivity = value
+                label.Text = "Hold Sensitivity: " .. percentage .. "%"
+            end
+        end
+    end)
+    
+    handle.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+    
+    -- Also allow clicking on background
+    background.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            local bgPos = background.AbsolutePosition.X
+            local bgSize = background.AbsoluteSize.X
+            local mouseX = input.Position.X
+            
+            local relativeX = (mouseX - bgPos) / bgSize
+            relativeX = math.max(0, math.min(1, relativeX))
+            
+            handle.Position = UDim2.new(relativeX, -8, 0.5, -8)
+            
+            local percentage = math.floor(relativeX * 100)
+            local value = 0.1 + (relativeX * 0.9)
+            
+            if sliderType == "tap" then
+                tapSensitivity = value
+                label.Text = "Tap Sensitivity: " .. percentage .. "%"
+            else
+                holdSensitivity = value
+                label.Text = "Hold Sensitivity: " .. percentage .. "%"
+            end
         end
     end)
 end
@@ -226,44 +378,50 @@ end
 
 -- Control methods
 local function tapAction()
+    local tapDuration = 0.02 + (tapSensitivity * 0.06) -- 0.02-0.08 seconds based on sensitivity
+    
     -- Method 1: Virtual Input (Space key for light tap)
     pcall(function()
         VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-        wait(0.03) -- Short tap for light movement
+        wait(tapDuration)
         VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
     end)
     
     -- Method 2: Mouse button simulation  
     pcall(function()
         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
-        wait(0.03)
+        wait(tapDuration)
         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
     end)
 end
 
 local function holdAction()
+    local holdDuration = 0.05 + (holdSensitivity * 0.1) -- 0.05-0.15 seconds based on sensitivity
+    
     -- Method 1: Longer space key hold for stronger movement
     pcall(function()
         VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-        wait(0.08) -- Longer hold for more movement
+        wait(holdDuration)
         VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
     end)
     
     -- Method 2: Mouse hold simulation
     pcall(function()
         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
-        wait(0.08)
+        wait(holdDuration)
         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
     end)
 end
 
 -- Strong hold for initial centering
 local function strongHoldAction()
+    local strongDuration = 0.08 + (holdSensitivity * 0.12) -- 0.08-0.2 seconds based on sensitivity
+    
     -- Multiple quick holds for strong movement to center
     for i = 1, 2 do
         pcall(function()
             VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-            wait(0.1)
+            wait(strongDuration)
             VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
             wait(0.02)
         end)
@@ -339,9 +497,10 @@ local function autoReelLogic()
             statusLabel.Text = "Status: Tap (Slow Right)"
         else
             -- Fish is slightly right - very light tap
+            local lightTapDuration = 0.01 + (tapSensitivity * 0.02) -- 0.01-0.03 seconds
             pcall(function()
                 VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-                wait(0.01) -- Very short tap
+                wait(lightTapDuration)
                 VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
             end)
             statusLabel.Text = "Status: Light Tap"
