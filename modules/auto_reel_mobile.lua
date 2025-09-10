@@ -452,7 +452,8 @@ end
 
 -- Control methods
 local function tapAction()
-    local tapDuration = 0.02 + (tapSensitivity * 0.06)
+    -- Gentle tap - very light and slow
+    local tapDuration = 0.03 + (tapSensitivity * 0.04)  -- 0.03-0.07 seconds (slower)
     
     pcall(function()
         VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
@@ -540,24 +541,24 @@ autoReelLogic = function()
         local centerTarget = 0.5
         local centerDifference = centerTarget - playerPos
         
-        if centerDifference > 0.2 then
+        if centerDifference > 0.25 then
             strongHoldAction()
             statusLabel.Text = "Status: Strong Hold Centering"
-        elseif centerDifference > 0.1 then
+        elseif centerDifference > 0.15 then
             holdAction()
             statusLabel.Text = "Status: Hold Centering"
-        elseif centerDifference > 0.05 then
-            -- Medium tap for centering
-            local mediumTapDuration = 0.08 + (tapSensitivity * 0.12)
+        elseif centerDifference > 0.08 then
+            -- Gentle medium tap for centering
+            local mediumTapDuration = 0.06 + (tapSensitivity * 0.08)
             pcall(function()
                 VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
                 wait(mediumTapDuration)
                 VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
             end)
-            statusLabel.Text = "Status: Medium Tap Centering"
-        elseif centerDifference > 0.02 then
+            statusLabel.Text = "Status: Gentle Medium Centering"
+        elseif centerDifference > 0.03 then
             tapAction()
-            statusLabel.Text = "Status: Light Tap Centering"
+            statusLabel.Text = "Status: Gentle Light Centering"
         else
             statusLabel.Text = "Status: Centered, Ready"
         end
@@ -583,31 +584,31 @@ autoReelLogic = function()
     
     if difference > deadZone then
         -- Fish is to the right - need to move right
-        if difference > 0.2 then
+        if difference > 0.25 then
             strongHoldAction()
             statusLabel.Text = "Status: Strong Hold (Very Fast)"
-            actionCooldown = 0.2  -- Cooldown after strong action
+            actionCooldown = 0.25  -- Longer cooldown after strong action
             lastAction = "strong_hold"
-        elseif difference > 0.1 then
+        elseif difference > 0.15 then
             holdAction()
             statusLabel.Text = "Status: Hold (Fast)"
-            actionCooldown = 0.15  -- Cooldown after hold
+            actionCooldown = 0.2   -- Longer cooldown after hold
             lastAction = "hold"
-        elseif difference > 0.05 then
-            -- Medium tap for moderate speed
-            local mediumTapDuration = 0.08 + (tapSensitivity * 0.12)
+        elseif difference > 0.08 then
+            -- Medium tap for moderate speed - make it gentler
+            local mediumTapDuration = 0.06 + (tapSensitivity * 0.08)  -- Reduced duration
             pcall(function()
                 VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
                 wait(mediumTapDuration)
                 VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
             end)
-            statusLabel.Text = "Status: Medium Tap"
-            actionCooldown = 0.1
+            statusLabel.Text = "Status: Gentle Medium Tap"
+            actionCooldown = 0.12
             lastAction = "medium_tap"
         else
             tapAction()
-            statusLabel.Text = "Status: Light Tap"
-            actionCooldown = 0.05
+            statusLabel.Text = "Status: Gentle Light Tap"
+            actionCooldown = 0.08  -- Slightly longer cooldown
             lastAction = "light_tap"
         end
     elseif difference < -deadZone then
