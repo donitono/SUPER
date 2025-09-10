@@ -15,6 +15,7 @@ local player = Players.LocalPlayer
 
 -- Load Modules (dari repository kita sendiri)
 local autofarm = loadstring(game:HttpGet("https://raw.githubusercontent.com/donitono/SUPER/main/modules/autofarm.lua"))()
+local Reel = loadstring(game:HttpGet("https://raw.githubusercontent.com/donitono/SUPER/main/modules/reel.lua"))()
 -- teleports dan player modules akan dibuat nanti, sementara pakai fallback methods
 
 -- Create Main Window
@@ -72,13 +73,44 @@ AutofarmSection:NewToggle("Auto Shake", "Automatically shake when needed", funct
 end)
 
 -- Auto Reel
-AutofarmSection:NewToggle("Auto Reel", "Automatically reel in fish", function(state)
+AutofarmSection:NewToggle("Auto Reel", "Automatically control reel minigame", function(state)
     if state then
         autofarm.startAutoReel()
-        print("Auto Reel: Enabled")
+        print("Auto Reel: Enabled (Advanced Mode)")
     else
         autofarm.stopAutoReel()
         print("Auto Reel: Disabled")
+    end
+end)
+
+-- Reel Settings
+local ReelSection = AutofarmTab:NewSection("Reel Settings")
+
+ReelSection:NewSlider("Sensitivity", "Control sensitivity (0.1 = slow, 1.0 = fast)", 1.0, 0.1, function(value)
+    if Reel then
+        Reel.setSensitivity(value)
+        print("Reel Sensitivity: " .. value)
+    end
+end)
+
+ReelSection:NewSlider("Hold Threshold", "Distance to use hold instead of tap", 0.8, 0.1, function(value)
+    if Reel then
+        Reel.setHoldThreshold(value)
+        print("Hold Threshold: " .. value)
+    end
+end)
+
+ReelSection:NewSlider("Tap Strength", "Tap movement strength", 1.0, 0.1, function(value)
+    if Reel then
+        Reel.setTapStrength(value)
+        print("Tap Strength: " .. value)
+    end
+end)
+
+ReelSection:NewSlider("Hold Strength", "Hold movement strength", 1.0, 0.1, function(value)
+    if Reel then
+        Reel.setHoldStrength(value)
+        print("Hold Strength: " .. value)
     end
 end)
 
