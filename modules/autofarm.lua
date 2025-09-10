@@ -14,8 +14,11 @@ local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 
--- Load Reel Module
-local Reel = loadstring(game:HttpGet("https://raw.githubusercontent.com/donitono/SUPER/main/modules/reel.lua"))()
+-- Load Reel Module with error handling
+local Reel
+pcall(function()
+    Reel = loadstring(game:HttpGet("https://raw.githubusercontent.com/donitono/SUPER/main/modules/reel.lua"))()
+end)
 
 -- Autofarm States
 autofarm.autoCastEnabled = false
@@ -310,31 +313,40 @@ end
 function autofarm.startAutoReel()
     autofarm.autoReelEnabled = true
     
-    -- Gunakan Reel module untuk kontrol yang lebih presisi
-    Reel.setSensitivity(0.7) -- Set sensitivity medium
-    Reel.setHoldThreshold(0.3) -- Threshold untuk hold vs tap
-    Reel.setTapStrength(0.5) -- Kekuatan tap
-    Reel.setHoldStrength(0.8) -- Kekuatan hold
+    -- Gunakan Reel module untuk kontrol yang lebih presisi (jika tersedia)
+    if Reel then
+        pcall(function()
+            Reel.setSensitivity(0.7) -- Set sensitivity medium
+            Reel.setHoldThreshold(0.3) -- Threshold untuk hold vs tap
+            Reel.setTapStrength(0.5) -- Kekuatan tap
+            Reel.setHoldStrength(0.8) -- Kekuatan hold
+        end)
+    end
     
     -- Monitor untuk reel minigame
-    spawn(function()
+    task.spawn(function()
         while autofarm.autoReelEnabled do
             local success, err = pcall(function()
                 local playerGui = player:WaitForChild("PlayerGui")
                 local reel = playerGui:FindFirstChild("reel")
                 
-                if reel then
+                if reel and Reel then
                     -- Reel minigame ditemukan, aktifkan auto reel
-                    if not Reel.getStatus().isReeling then
+                    local status = Reel.getStatus()
+                    if status and not status.isReeling then
                         print("[AUTOFARM] 🎣 Reel minigame detected! Starting auto reel...")
                         Reel.startAutoReel()
                     end
-                else
+                elseif not reel and Reel then
                     -- Reel minigame tidak ada, stop auto reel
-                    if Reel.getStatus().isReeling then
+                    local status = Reel.getStatus()
+                    if status and status.isReeling then
                         print("[AUTOFARM] 🛑 Reel minigame ended! Stopping auto reel...")
                         Reel.stopAutoReel()
                     end
+                end
+            end)
+            
                 end
             end)
             
@@ -342,20 +354,11 @@ function autofarm.startAutoReel()
                 warn("Auto Reel error:", err)
             end
             
-            wait(0.1) -- Check setiap 100ms
+            task.wait(0.1) -- Check setiap 100ms
         end
     end)
     
     print("[AUTOFARM] ✅ Auto Reel Started (Advanced Mode)")
-end
-            
-            if not success then
-                warn("Auto Reel Error: " .. tostring(err))
-            end
-            
-            wait(0.1)
-        end
-    end)
 end
 
 function autofarm.stopAutoReel()

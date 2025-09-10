@@ -70,38 +70,43 @@ local function simulateInput(inputType, strength)
     
     if inputType == "tap" then
         -- Simulasi tap (click cepat)
-        UserInputService:GetPropertyChangedSignal("MouseBehavior"):Connect(function() end)
-        
-        -- Kirim mouse click event
-        local mouse = player:GetMouse()
-        if mouse then
-            -- Simulasi mouse down
-            game:GetService("VirtualInputManager"):SendMouseButtonEvent(
-                mouse.X, mouse.Y, 0, true, game, 0
-            )
+        pcall(function()
+            local VirtualInputManager = game:GetService("VirtualInputManager")
+            local mouse = player:GetMouse()
             
-            -- Wait sebentar lalu release
-            wait(0.05 * strength)
-            
-            game:GetService("VirtualInputManager"):SendMouseButtonEvent(
-                mouse.X, mouse.Y, 0, false, game, 0
-            )
-        end
+            if VirtualInputManager and mouse then
+                -- Simulasi mouse down
+                VirtualInputManager:SendMouseButtonEvent(
+                    mouse.X, mouse.Y, 0, true, game, 0
+                )
+                
+                -- Wait sebentar lalu release
+                task.wait(0.02 + (0.03 * strength))
+                
+                VirtualInputManager:SendMouseButtonEvent(
+                    mouse.X, mouse.Y, 0, false, game, 0
+                )
+            end
+        end)
         
     elseif inputType == "hold" then
         -- Simulasi hold (tahan lebih lama)
-        local mouse = player:GetMouse()
-        if mouse then
-            game:GetService("VirtualInputManager"):SendMouseButtonEvent(
-                mouse.X, mouse.Y, 0, true, game, 0
-            )
+        pcall(function()
+            local VirtualInputManager = game:GetService("VirtualInputManager")
+            local mouse = player:GetMouse()
             
-            wait(0.1 * strength)
-            
-            game:GetService("VirtualInputManager"):SendMouseButtonEvent(
-                mouse.X, mouse.Y, 0, false, game, 0
-            )
-        end
+            if VirtualInputManager and mouse then
+                VirtualInputManager:SendMouseButtonEvent(
+                    mouse.X, mouse.Y, 0, true, game, 0
+                )
+                
+                task.wait(0.05 + (0.1 * strength))
+                
+                VirtualInputManager:SendMouseButtonEvent(
+                    mouse.X, mouse.Y, 0, false, game, 0
+                )
+            end
+        end)
     end
 end
 
@@ -149,7 +154,7 @@ local function controlReel()
     end
     
     -- Delay sesuai reaction time
-    wait(Settings.reactionTime)
+    task.wait(Settings.reactionTime)
 end
 
 -- Fungsi untuk memulai reel automation
@@ -222,9 +227,9 @@ function Reel.getStatus()
 end
 
 -- Auto-start detection
-spawn(function()
+task.spawn(function()
     while true do
-        wait(0.1)
+        task.wait(0.1)
         
         if Settings.enabled and not isReeling then
             local reelGui = getReelGui()
