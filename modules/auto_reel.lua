@@ -84,14 +84,26 @@ local function createUI()
     -- Status Label
     statusLabel = Instance.new("TextLabel")
     statusLabel.Name = "StatusLabel"
-    statusLabel.Size = UDim2.new(1, 0, 0, 25)
-    statusLabel.Position = UDim2.new(0, 0, 0.75, 0)
+    statusLabel.Size = UDim2.new(1, 0, 0, 20)
+    statusLabel.Position = UDim2.new(0, 0, 0.7, 0)
     statusLabel.BackgroundTransparency = 1
     statusLabel.Text = "Status: Inactive"
     statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
     statusLabel.TextScaled = true
     statusLabel.Font = Enum.Font.Gotham
     statusLabel.Parent = mainFrame
+    
+    -- Debug Label for positions
+    local debugLabel = Instance.new("TextLabel")
+    debugLabel.Name = "DebugLabel"
+    debugLabel.Size = UDim2.new(1, 0, 0, 15)
+    debugLabel.Position = UDim2.new(0, 0, 0.87, 0)
+    debugLabel.BackgroundTransparency = 1
+    debugLabel.Text = "Debug: --"
+    debugLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+    debugLabel.TextScaled = true
+    debugLabel.Font = Enum.Font.Gotham
+    debugLabel.Parent = mainFrame
     
     -- Make draggable
     local dragging = false
@@ -129,19 +141,39 @@ local function findReelElements()
     
     reelGui = reelScreenGui
     
-    -- Look for fish bar (the black line that moves)
-    fishBar = reelGui:FindFirstChild("bar") or reelGui:FindFirstChildOfClass("Frame")
-    if fishBar then
-        -- Look for player bar (white bar that we control)
-        playerBar = fishBar:FindFirstChild("playerbar") or fishBar:FindFirstChild("player")
-        if not playerBar then
-            -- Look in different structure
-            for _, child in pairs(fishBar:GetChildren()) do
-                if child:IsA("Frame") and child.Name:lower():find("player") then
-                    playerBar = child
-                    break
+    -- More thorough search for reel elements
+    local function searchInGui(parent, depth)
+        if depth > 5 then return end -- Prevent infinite recursion
+        
+        for _, child in pairs(parent:GetChildren()) do
+            if child:IsA("Frame") then
+                -- Look for fish element (the moving target)
+                local fish = child:FindFirstChild("fish") or child:FindFirstChild("licon") or child:FindFirstChild("ricon")
+                if fish then
+                    fishBar = child
                 end
+                
+                -- Look for player bar (the controllable white bar)  
+                local playerBarFound = child:FindFirstChild("playerbar") or child:FindFirstChild("player")
+                if playerBarFound then
+                    playerBar = playerBarFound
+                    if not fishBar then fishBar = child end
+                end
+                
+                -- Recursive search
+                searchInGui(child, depth + 1)
             end
+        end
+    end
+    
+    searchInGui(reelGui, 0)
+    
+    -- Fallback: use first frame as container
+    if not fishBar and not playerBar then
+        local container = reelGui:FindFirstChildOfClass("Frame")
+        if container then
+            fishBar = container
+            playerBar = container:FindFirstChildOfClass("Frame")
         end
     end
     
@@ -152,52 +184,75 @@ end
 local function getFishPosition()
     if not fishBar then return 0.5 end
     
-    -- Try to find fish indicator element
-    local fish = fishBar:FindFirstChild("fish") or fishBar:FindFirstChild("goal")
+    -- Method 1: Look for fish/goal indicator elements
+    local fish = fishBar:FindFirstChild("fish") or fishBar:FindFirstChild("goal") or fishBar:FindFirstChild("licon") or fishBar:FindFirstChild("ricon")
     if fish then
-        return fish.Position.X.Scale + (fish.Size.X.Scale / 2)
+        local fishPos = fish.Position.X.Scale + (fish.Size.X.Scale / 2)
+        -- Normalize position to 0-1 range
+        return math.max(0, math.min(1, fishPos))
     end
     
-    -- Fallback: use bar position if fish element not found
-    return fishBar.Position.X.Scale + (fishBar.Size.X.Scale / 2)
+    -- Method 2: Look for progress bar or fish indicator
+    for _, child in pairs(fishBar:GetDescendants()) do
+        if child:IsA("Frame") and (child.Name:lower():find("fish") or child.Name:lower():find("goal")) then
+            local fishPos = child.Position.X.Scale + (child.Size.X.Scale / 2)
+            return math.max(0, math.min(1, fishPos))
+        end
+    end
+    
+    -- Method 3: Look for ImageLabel fish indicators
+    for _, child in pairs(fishBar:GetDescendants()) do
+        if child:IsA("ImageLabel") and (child.Name:lower():find("fish") or child.Name:lower():find("icon")) then
+            local fishPos = child.Position.X.Scale + (child.Size.X.Scale / 2)
+            return math.max(0, math.min(1, fishPos))
+        end
+    end
+    
+    -- Fallback: return center position
+    return 0.5
 end
 
 local function getPlayerBarPosition()
     if not playerBar then return 0.5 end
     
-    return playerBar.Position.X.Scale + (playerBar.Size.X.Scale / 2)
+    -- Get the actual player bar position
+    local playerPos = playerBar.Position.X.Scale + (playerBar.Size.X.Scale / 2)
+    
+    -- Normalize position to 0-1 range  
+    return math.max(0, math.min(1, playerPos))
 end
 
 -- Control methods
 local function tapAction()
-    -- Method 1: Virtual Input (Space/Return key)
+    -- Method 1: Virtual Input (Space key for light tap)
     pcall(function()
         VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-        wait(0.05)
+        wait(0.03) -- Short tap for light movement
         VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
     end)
     
-    -- Method 2: Mouse click simulation
+    -- Method 2: Mouse button simulation  
     pcall(function()
-        local mouse = game.Players.LocalPlayer:GetMouse()
-        mouse.Button1Down:Connect(function() end)
-        mouse.Button1Up:Connect(function() end)
+        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+        wait(0.03)
+        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
     end)
 end
 
 local function holdAction()
-    -- Method 1: Hold Space key
+    -- Method 1: Longer space key hold for stronger movement
     pcall(function()
         VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-        wait(0.1)
+        wait(0.08) -- Longer hold for more movement
         VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
     end)
     
-    -- Method 2: Rapid taps for hold effect
-    for i = 1, 3 do
-        tapAction()
-        wait(0.02)
-    end
+    -- Method 2: Mouse hold simulation
+    pcall(function()
+        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+        wait(0.08)
+        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+    end)
 end
 
 -- Auto reel logic
@@ -209,22 +264,44 @@ local function autoReelLogic()
         return
     end
     
-    statusLabel.Text = "Status: Reeling..."
-    
     local fishPos = getFishPosition()
     local playerPos = getPlayerBarPosition()
     local difference = fishPos - playerPos
     
-    -- Control logic based on fish position
-    if math.abs(difference) > 0.05 then -- Dead zone to prevent jittering
-        if difference > 0.1 then
-            -- Fish is far to the right, hold for faster movement
+    -- Update debug info
+    local debugLabel = screenGui.MainFrame:FindFirstChild("DebugLabel")
+    if debugLabel then
+        debugLabel.Text = string.format("F:%.2f P:%.2f D:%.2f", fishPos, playerPos, difference)
+    end
+    
+    -- Improved control logic based on natural physics
+    -- Bar naturally drifts left, so we only need to input when fish is to the right
+    
+    local deadZone = 0.03 -- Small dead zone to prevent jittering
+    
+    if difference > deadZone then
+        -- Fish is to the right of player bar - need to move right
+        if difference > 0.15 then
+            -- Fish is far right - use hold for strong movement
             holdAction()
-        elseif difference > 0.02 then
-            -- Fish is slightly to the right, tap for slow movement
+            statusLabel.Text = "Status: Hold (Fast Right)"
+        elseif difference > 0.06 then
+            -- Fish is moderately right - use tap for gentle movement  
             tapAction()
+            statusLabel.Text = "Status: Tap (Slow Right)"
+        else
+            -- Fish is slightly right - very light tap
+            pcall(function()
+                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+                wait(0.01) -- Very short tap
+                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+            end)
+            statusLabel.Text = "Status: Light Tap"
         end
-        -- If difference is negative or small, let bar drift left naturally
+    else
+        -- Fish is to the left or in dead zone - let bar drift left naturally
+        statusLabel.Text = "Status: Drift Left"
+        -- No input - bar will move left naturally
     end
 end
 
