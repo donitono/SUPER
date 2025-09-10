@@ -502,6 +502,10 @@ local function strongHoldAction()
 end
 
 -- Auto reel logic
+local lastAction = ""
+local lastDifference = 0
+local actionCooldown = 0
+
 autoReelLogic = function()
     if not isAutoReelEnabled then return end
     
@@ -515,6 +519,9 @@ autoReelLogic = function()
         reelStartTime = tick()
         hasInitializedPosition = true
         statusLabel.Text = "Status: Initializing..."
+        lastAction = ""
+        lastDifference = 0
+        actionCooldown = 0
     end
     
     local currentTime = tick()
@@ -557,15 +564,35 @@ autoReelLogic = function()
         return
     end
     
-    local deadZone = 0.03
+    local deadZone = 0.02  -- Reduced dead zone for better tracking
+    
+    -- Anti-overshoot logic
+    if actionCooldown > 0 then
+        actionCooldown = actionCooldown - 0.1
+        statusLabel.Text = "Status: Cooldown (" .. string.format("%.1f", actionCooldown) .. "s)"
+        return
+    end
+    
+    -- Check if we're overshooting (went from positive to negative difference)
+    if lastDifference > 0.05 and difference < -0.05 then
+        actionCooldown = 0.3  -- 300ms cooldown after overshoot
+        statusLabel.Text = "Status: Overshoot Detected - Cooling Down"
+        lastDifference = difference
+        return
+    end
     
     if difference > deadZone then
+        -- Fish is to the right - need to move right
         if difference > 0.2 then
             strongHoldAction()
             statusLabel.Text = "Status: Strong Hold (Very Fast)"
+            actionCooldown = 0.2  -- Cooldown after strong action
+            lastAction = "strong_hold"
         elseif difference > 0.1 then
             holdAction()
             statusLabel.Text = "Status: Hold (Fast)"
+            actionCooldown = 0.15  -- Cooldown after hold
+            lastAction = "hold"
         elseif difference > 0.05 then
             -- Medium tap for moderate speed
             local mediumTapDuration = 0.08 + (tapSensitivity * 0.12)
@@ -575,13 +602,25 @@ autoReelLogic = function()
                 VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
             end)
             statusLabel.Text = "Status: Medium Tap"
+            actionCooldown = 0.1
+            lastAction = "medium_tap"
         else
             tapAction()
             statusLabel.Text = "Status: Light Tap"
+            actionCooldown = 0.05
+            lastAction = "light_tap"
         end
+    elseif difference < -deadZone then
+        -- Player bar is too far right from fish - need to drift back left
+        statusLabel.Text = "Status: Drift Left (Catching Up)"
+        lastAction = "drift"
     else
-        statusLabel.Text = "Status: Drift Left"
+        -- Within dead zone - good tracking
+        statusLabel.Text = "Status: Perfect Tracking"
+        lastAction = "tracking"
     end
+    
+    lastDifference = difference
 end
 
 -- Initialize
