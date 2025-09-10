@@ -29,6 +29,101 @@ local titleLabel
 local toggleButton
 local statusLabel
 
+-- Forward declarations
+local setupSliders
+local toggleAutoReel
+local autoReelLogic
+
+-- Setup slider functionality
+setupSliders = function(handle, background, label, sliderType)
+    local dragging = false
+    
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+        end
+    end)
+    
+    handle.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local bgPos = background.AbsolutePosition.X
+            local bgSize = background.AbsoluteSize.X
+            local mouseX = input.Position.X
+            
+            local relativeX = (mouseX - bgPos) / bgSize
+            relativeX = math.max(0, math.min(1, relativeX)) -- Clamp 0-1
+            
+            handle.Position = UDim2.new(relativeX, -8, 0.5, -8)
+            
+            local percentage = math.floor(relativeX * 100)
+            local value = 0.1 + (relativeX * 0.9) -- Convert to 0.1-1.0 range
+            
+            if sliderType == "tap" then
+                tapSensitivity = value
+                label.Text = "Tap Sensitivity: " .. percentage .. "%"
+            else
+                holdSensitivity = value
+                label.Text = "Hold Sensitivity: " .. percentage .. "%"
+            end
+        end
+    end)
+    
+    handle.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+    
+    -- Also allow clicking on background
+    background.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            local bgPos = background.AbsolutePosition.X
+            local bgSize = background.AbsoluteSize.X
+            local mouseX = input.Position.X
+            
+            local relativeX = (mouseX - bgPos) / bgSize
+            relativeX = math.max(0, math.min(1, relativeX))
+            
+            handle.Position = UDim2.new(relativeX, -8, 0.5, -8)
+            
+            local percentage = math.floor(relativeX * 100)
+            local value = 0.1 + (relativeX * 0.9)
+            
+            if sliderType == "tap" then
+                tapSensitivity = value
+                label.Text = "Tap Sensitivity: " .. percentage .. "%"
+            else
+                holdSensitivity = value
+                label.Text = "Hold Sensitivity: " .. percentage .. "%"
+            end
+        end
+    end)
+end
+
+-- Toggle auto reel function
+toggleAutoReel = function()
+    isAutoReelEnabled = not isAutoReelEnabled
+    
+    if isAutoReelEnabled then
+        toggleButton.Text = "ON"
+        toggleButton.BackgroundColor3 = Color3.fromRGB(40, 167, 69)
+        statusLabel.Text = "Status: Active"
+        
+        -- Start auto reel loop
+        reelConnection = RunService.Heartbeat:Connect(autoReelLogic)
+    else
+        toggleButton.Text = "OFF"
+        toggleButton.BackgroundColor3 = Color3.fromRGB(220, 53, 69)
+        statusLabel.Text = "Status: Inactive"
+        
+        -- Stop auto reel loop
+        if reelConnection then
+            reelConnection:Disconnect()
+            reelConnection = nil
+        end
+    end
+end
+
 -- Create UI
 local function createUI()
     -- Main ScreenGui
@@ -220,72 +315,6 @@ local function createUI()
     setupSliders(holdSliderHandle, holdSliderBg, holdLabel, "hold")
 end
 
--- Setup slider functionality
-local function setupSliders(handle, background, label, sliderType)
-    local dragging = false
-    
-    handle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-        end
-    end)
-    
-    handle.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local bgPos = background.AbsolutePosition.X
-            local bgSize = background.AbsoluteSize.X
-            local mouseX = input.Position.X
-            
-            local relativeX = (mouseX - bgPos) / bgSize
-            relativeX = math.max(0, math.min(1, relativeX)) -- Clamp 0-1
-            
-            handle.Position = UDim2.new(relativeX, -8, 0.5, -8)
-            
-            local percentage = math.floor(relativeX * 100)
-            local value = 0.1 + (relativeX * 0.9) -- Convert to 0.1-1.0 range
-            
-            if sliderType == "tap" then
-                tapSensitivity = value
-                label.Text = "Tap Sensitivity: " .. percentage .. "%"
-            else
-                holdSensitivity = value
-                label.Text = "Hold Sensitivity: " .. percentage .. "%"
-            end
-        end
-    end)
-    
-    handle.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-    
-    -- Also allow clicking on background
-    background.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            local bgPos = background.AbsolutePosition.X
-            local bgSize = background.AbsoluteSize.X
-            local mouseX = input.Position.X
-            
-            local relativeX = (mouseX - bgPos) / bgSize
-            relativeX = math.max(0, math.min(1, relativeX))
-            
-            handle.Position = UDim2.new(relativeX, -8, 0.5, -8)
-            
-            local percentage = math.floor(relativeX * 100)
-            local value = 0.1 + (relativeX * 0.9)
-            
-            if sliderType == "tap" then
-                tapSensitivity = value
-                label.Text = "Tap Sensitivity: " .. percentage .. "%"
-            else
-                holdSensitivity = value
-                label.Text = "Hold Sensitivity: " .. percentage .. "%"
-            end
-        end
-    end)
-end
-
 -- Find reel GUI elements
 local function findReelElements()
     local reelScreenGui = playerGui:FindFirstChild("reel")
@@ -429,7 +458,7 @@ local function strongHoldAction()
 end
 
 -- Auto reel logic
-local function autoReelLogic()
+autoReelLogic = function()
     if not isAutoReelEnabled then return end
     
     if not findReelElements() then
@@ -509,30 +538,6 @@ local function autoReelLogic()
         -- Fish is to the left or in dead zone - let bar drift left naturally
         statusLabel.Text = "Status: Drift Left"
         -- No input - bar will move left naturally
-    end
-end
-
--- Toggle auto reel
-local function toggleAutoReel()
-    isAutoReelEnabled = not isAutoReelEnabled
-    
-    if isAutoReelEnabled then
-        toggleButton.Text = "ON"
-        toggleButton.BackgroundColor3 = Color3.fromRGB(40, 167, 69)
-        statusLabel.Text = "Status: Active"
-        
-        -- Start auto reel loop
-        reelConnection = RunService.Heartbeat:Connect(autoReelLogic)
-    else
-        toggleButton.Text = "OFF"
-        toggleButton.BackgroundColor3 = Color3.fromRGB(220, 53, 69)
-        statusLabel.Text = "Status: Inactive"
-        
-        -- Stop auto reel loop
-        if reelConnection then
-            reelConnection:Disconnect()
-            reelConnection = nil
-        end
     end
 end
 
