@@ -12,23 +12,60 @@ local player = Players.LocalPlayer
 local isReeling = false
 local reelConnection = nil
 
--- Simple click function
+-- Simple click function with multiple methods
 local function doClick()
-    local success = pcall(function()
+    local success = false
+    
+    -- Method 1: mouse1click (most common)
+    pcall(function()
         if mouse1click then
             mouse1click()
-        elseif mouse1press then
-            mouse1press()
-            wait(0.01)
-            mouse1release()
-        else
-            -- Fallback method
-            local mouse = player:GetMouse()
-            if mouse then
-                mouse.Button1Down:Connect(function() end)
-            end
+            success = true
+            print("[SIMPLE REEL] 🖱️ Click (mouse1click)")
         end
     end)
+    
+    -- Method 2: mouse1press/release
+    if not success then
+        pcall(function()
+            if mouse1press and mouse1release then
+                mouse1press()
+                task.wait(0.05)
+                mouse1release()
+                success = true
+                print("[SIMPLE REEL] 🖱️ Click (mouse1press)")
+            end
+        end)
+    end
+    
+    -- Method 3: VirtualInputManager
+    if not success then
+        pcall(function()
+            local VirtualInputManager = game:GetService("VirtualInputManager")
+            local mouse = player:GetMouse()
+            if VirtualInputManager and mouse then
+                VirtualInputManager:SendMouseButtonEvent(mouse.X, mouse.Y, 0, true, game, 0)
+                task.wait(0.01)
+                VirtualInputManager:SendMouseButtonEvent(mouse.X, mouse.Y, 0, false, game, 0)
+                success = true
+                print("[SIMPLE REEL] 🖱️ Click (VirtualInput)")
+            end
+        end)
+    end
+    
+    -- Method 4: Key simulation (Space bar)
+    if not success then
+        pcall(function()
+            local UserInputService = game:GetService("UserInputService")
+            UserInputService:GetPropertyChangedSignal("InputBegan"):Connect(function() end)
+            game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+            task.wait(0.01)
+            game:GetService("VirtualInputManager"):SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+            success = true
+            print("[SIMPLE REEL] ⌨️ Click (Space key)")
+        end)
+    end
+    
     return success
 end
 
@@ -44,15 +81,49 @@ function SimpleReel.startAutoReel()
             local playerGui = player:FindFirstChild("PlayerGui")
             if playerGui then
                 local reelGui = playerGui:FindFirstChild("reel")
-                if reelGui then
-                    -- Simple method: click every frame when reel is active
-                    doClick()
-                    wait(0.05) -- Small delay to prevent spam
+                if reelGui and reelGui.Visible then
+                    print("[SIMPLE REEL] 🎯 Reel GUI detected - attempting click...")
+                    
+                    -- Try to click multiple times for reliability
+                    local clicked = doClick()
+                    if clicked then
+                        print("[SIMPLE REEL] ✅ Click successful!")
+                    else
+                        print("[SIMPLE REEL] ❌ Click failed, trying alternative...")
+                        -- Alternative: try to interact with reel elements directly
+                        for _, child in pairs(reelGui:GetChildren()) do
+                            if child:IsA("Frame") or child:IsA("TextButton") then
+                                pcall(function()
+                                    if child.Visible then
+                                        local conn
+                                        conn = child.MouseButton1Click:Connect(function()
+                                            conn:Disconnect()
+                                        end)
+                                        child.MouseButton1Click:Fire()
+                                    end
+                                end)
+                            end
+                        end
+                    end
+                    
+                    task.wait(0.1) -- Wait between clicks
+                else
+                    -- Debug: show what GUIs are available
+                    local guis = {}
+                    for _, child in pairs(playerGui:GetChildren()) do
+                        if child:IsA("ScreenGui") then
+                            table.insert(guis, child.Name)
+                        end
+                    end
+                    if #guis > 0 then
+                        print("[SIMPLE REEL] 📋 Available GUIs:", table.concat(guis, ", "))
+                    end
                 end
             end
         end)
         
         if not success then
+            print("[SIMPLE REEL] ❌ Error in main loop")
             SimpleReel.stopAutoReel()
         end
     end)
