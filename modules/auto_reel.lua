@@ -39,18 +39,18 @@ setupSliders = function(handle, background, label, sliderType)
     local dragging = false
     
     handle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
         end
     end)
     
     handle.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local bgPos = background.AbsolutePosition.X
             local bgSize = background.AbsoluteSize.X
-            local mouseX = input.Position.X
+            local inputX = input.Position.X
             
-            local relativeX = (mouseX - bgPos) / bgSize
+            local relativeX = (inputX - bgPos) / bgSize
             relativeX = math.max(0, math.min(1, relativeX)) -- Clamp 0-1
             
             handle.Position = UDim2.new(relativeX, -8, 0.5, -8)
@@ -69,19 +69,19 @@ setupSliders = function(handle, background, label, sliderType)
     end)
     
     handle.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
         end
     end)
     
-    -- Also allow clicking on background
+    -- Also allow clicking/touching on background
     background.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             local bgPos = background.AbsolutePosition.X
             local bgSize = background.AbsoluteSize.X
-            local mouseX = input.Position.X
+            local inputX = input.Position.X
             
-            local relativeX = (mouseX - bgPos) / bgSize
+            local relativeX = (inputX - bgPos) / bgSize
             relativeX = math.max(0, math.min(1, relativeX))
             
             handle.Position = UDim2.new(relativeX, -8, 0.5, -8)
@@ -425,7 +425,8 @@ local function tapAction()
 end
 
 local function holdAction()
-    local holdDuration = 0.05 + (holdSensitivity * 0.1) -- 0.05-0.15 seconds based on sensitivity
+    -- Real hold - menahan lama (0.3-0.8 detik)
+    local holdDuration = 0.3 + (holdSensitivity * 0.5)  -- 0.3 to 0.8 seconds
     
     -- Method 1: Longer space key hold for stronger movement
     pcall(function()
@@ -444,17 +445,20 @@ end
 
 -- Strong hold for initial centering
 local function strongHoldAction()
-    local strongDuration = 0.08 + (holdSensitivity * 0.12) -- 0.08-0.2 seconds based on sensitivity
+    -- Very strong hold - menahan sangat lama (0.6-1.2 detik)
+    local strongDuration = 0.6 + (holdSensitivity * 0.6)  -- 0.6 to 1.2 seconds
     
-    -- Multiple quick holds for strong movement to center
-    for i = 1, 2 do
-        pcall(function()
-            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-            wait(strongDuration)
-            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
-            wait(0.02)
-        end)
-    end
+    pcall(function()
+        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+        wait(strongDuration)
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+    end)
+    
+    pcall(function()
+        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+        wait(strongDuration)
+        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+    end)
 end
 
 -- Auto reel logic
@@ -493,18 +497,24 @@ autoReelLogic = function()
         local centerTarget = 0.5
         local centerDifference = centerTarget - playerPos
         
-        if centerDifference > 0.15 then
-            -- Far from center, use strong hold
+        if centerDifference > 0.2 then
             strongHoldAction()
-            statusLabel.Text = "Status: Strong Centering"
-        elseif centerDifference > 0.08 then
-            -- Moderately far from center
+            statusLabel.Text = "Status: Strong Hold Centering"
+        elseif centerDifference > 0.1 then
             holdAction()
-            statusLabel.Text = "Status: Centering (Hold)"
-        elseif centerDifference > 0.03 then
-            -- Need to move right slightly to center
+            statusLabel.Text = "Status: Hold Centering"
+        elseif centerDifference > 0.05 then
+            -- Medium tap for centering
+            local mediumTapDuration = 0.08 + (tapSensitivity * 0.12)
+            pcall(function()
+                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+                wait(mediumTapDuration)
+                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+            end)
+            statusLabel.Text = "Status: Medium Tap Centering"
+        elseif centerDifference > 0.02 then
             tapAction()
-            statusLabel.Text = "Status: Centering (Tap)"
+            statusLabel.Text = "Status: Light Tap Centering"
         else
             statusLabel.Text = "Status: Centered, Ready"
         end
@@ -516,22 +526,23 @@ autoReelLogic = function()
     
     if difference > deadZone then
         -- Fish is to the right of player bar - need to move right
-        if difference > 0.15 then
-            -- Fish is far right - use hold for strong movement
+        if difference > 0.2 then
+            strongHoldAction()
+            statusLabel.Text = "Status: Strong Hold (Very Fast)"
+        elseif difference > 0.1 then
             holdAction()
-            statusLabel.Text = "Status: Hold (Fast Right)"
-        elseif difference > 0.06 then
-            -- Fish is moderately right - use tap for gentle movement  
-            tapAction()
-            statusLabel.Text = "Status: Tap (Slow Right)"
-        else
-            -- Fish is slightly right - very light tap
-            local lightTapDuration = 0.01 + (tapSensitivity * 0.02) -- 0.01-0.03 seconds
+            statusLabel.Text = "Status: Hold (Fast)"
+        elseif difference > 0.05 then
+            -- Medium tap for moderate speed
+            local mediumTapDuration = 0.08 + (tapSensitivity * 0.12)
             pcall(function()
                 VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-                wait(lightTapDuration)
+                wait(mediumTapDuration)
                 VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
             end)
+            statusLabel.Text = "Status: Medium Tap"
+        else
+            tapAction()
             statusLabel.Text = "Status: Light Tap"
         end
     else

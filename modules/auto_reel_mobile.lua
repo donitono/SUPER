@@ -468,7 +468,8 @@ local function tapAction()
 end
 
 local function holdAction()
-    local holdDuration = 0.05 + (holdSensitivity * 0.1)
+    -- Real hold - menahan lama (0.3-0.8 detik)
+    local holdDuration = 0.3 + (holdSensitivity * 0.5)  -- 0.3 to 0.8 seconds
     
     pcall(function()
         VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
@@ -484,16 +485,20 @@ local function holdAction()
 end
 
 local function strongHoldAction()
-    local strongDuration = 0.08 + (holdSensitivity * 0.12)
+    -- Very strong hold - menahan sangat lama (0.6-1.2 detik)
+    local strongDuration = 0.6 + (holdSensitivity * 0.6)  -- 0.6 to 1.2 seconds
     
-    for i = 1, 2 do
-        pcall(function()
-            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-            wait(strongDuration)
-            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
-            wait(0.02)
-        end)
-    end
+    pcall(function()
+        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+        wait(strongDuration)
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+    end)
+    
+    pcall(function()
+        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+        wait(strongDuration)
+        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+    end)
 end
 
 -- Auto reel logic
@@ -528,15 +533,24 @@ autoReelLogic = function()
         local centerTarget = 0.5
         local centerDifference = centerTarget - playerPos
         
-        if centerDifference > 0.15 then
+        if centerDifference > 0.2 then
             strongHoldAction()
-            statusLabel.Text = "Status: Strong Centering"
-        elseif centerDifference > 0.08 then
+            statusLabel.Text = "Status: Strong Hold Centering"
+        elseif centerDifference > 0.1 then
             holdAction()
-            statusLabel.Text = "Status: Centering (Hold)"
-        elseif centerDifference > 0.03 then
+            statusLabel.Text = "Status: Hold Centering"
+        elseif centerDifference > 0.05 then
+            -- Medium tap for centering
+            local mediumTapDuration = 0.08 + (tapSensitivity * 0.12)
+            pcall(function()
+                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+                wait(mediumTapDuration)
+                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+            end)
+            statusLabel.Text = "Status: Medium Tap Centering"
+        elseif centerDifference > 0.02 then
             tapAction()
-            statusLabel.Text = "Status: Centering (Tap)"
+            statusLabel.Text = "Status: Light Tap Centering"
         else
             statusLabel.Text = "Status: Centered, Ready"
         end
@@ -546,19 +560,23 @@ autoReelLogic = function()
     local deadZone = 0.03
     
     if difference > deadZone then
-        if difference > 0.15 then
+        if difference > 0.2 then
+            strongHoldAction()
+            statusLabel.Text = "Status: Strong Hold (Very Fast)"
+        elseif difference > 0.1 then
             holdAction()
-            statusLabel.Text = "Status: Hold (Fast Right)"
-        elseif difference > 0.06 then
-            tapAction()
-            statusLabel.Text = "Status: Tap (Slow Right)"
-        else
-            local lightTapDuration = 0.01 + (tapSensitivity * 0.02)
+            statusLabel.Text = "Status: Hold (Fast)"
+        elseif difference > 0.05 then
+            -- Medium tap for moderate speed
+            local mediumTapDuration = 0.08 + (tapSensitivity * 0.12)
             pcall(function()
                 VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-                wait(lightTapDuration)
+                wait(mediumTapDuration)
                 VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
             end)
+            statusLabel.Text = "Status: Medium Tap"
+        else
+            tapAction()
             statusLabel.Text = "Status: Light Tap"
         end
     else
