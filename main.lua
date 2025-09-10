@@ -16,8 +16,12 @@ local player = Players.LocalPlayer
 -- Load Modules (dari repository kita sendiri)
 local autofarm = loadstring(game:HttpGet("https://raw.githubusercontent.com/donitono/SUPER/main/modules/autofarm.lua"))()
 
--- Load Simple Reel (more reliable)
+-- Load Reel Modules with options
 local Reel = loadstring(game:HttpGet("https://raw.githubusercontent.com/donitono/SUPER/main/modules/simple_reel.lua"))()
+local UltraReel = loadstring(game:HttpGet("https://raw.githubusercontent.com/donitono/SUPER/main/modules/ultra_reel.lua"))()
+
+-- Current reel module selection
+local currentReelModule = Reel
 
 -- teleports dan player modules akan dibuat nanti, sementara pakai fallback methods
 
@@ -75,13 +79,30 @@ AutofarmSection:NewToggle("Auto Shake", "Automatically shake when needed", funct
     end
 end)
 
+-- Auto Reel Method Selection
+AutofarmSection:NewDropdown("Reel Method", "Select auto reel method", {"Smart Detection", "Aggressive Clicking"}, function(option)
+    if option == "Smart Detection" then
+        currentReelModule = Reel
+        print("Reel Method: Smart Detection (waits for reel minigame)")
+    elseif option == "Aggressive Clicking" then
+        currentReelModule = UltraReel
+        print("Reel Method: Aggressive Clicking (clicks continuously)")
+    end
+end)
+
 -- Auto Reel
 AutofarmSection:NewToggle("Auto Reel", "Automatically control reel minigame", function(state)
     if state then
-        autofarm.startAutoReel()
-        print("Auto Reel: Enabled (Advanced Mode)")
+        if currentReelModule then
+            currentReelModule.startAutoReel()
+            print("Auto Reel: Enabled")
+        else
+            print("Auto Reel: Error - No reel module selected")
+        end
     else
-        autofarm.stopAutoReel()
+        if currentReelModule then
+            currentReelModule.stopAutoReel()
+        end
         print("Auto Reel: Disabled")
     end
 end)
@@ -90,29 +111,29 @@ end)
 local ReelSection = AutofarmTab:NewSection("Reel Settings")
 
 ReelSection:NewSlider("Sensitivity", "Control sensitivity (0.1 = slow, 1.0 = fast)", 1.0, 0.1, function(value)
-    if Reel then
-        Reel.setSensitivity(value)
+    if currentReelModule and currentReelModule.setSensitivity then
+        currentReelModule.setSensitivity(value)
         print("Reel Sensitivity: " .. value)
     end
 end)
 
 ReelSection:NewSlider("Hold Threshold", "Distance to use hold instead of tap", 0.8, 0.1, function(value)
-    if Reel then
-        Reel.setHoldThreshold(value)
+    if currentReelModule and currentReelModule.setHoldThreshold then
+        currentReelModule.setHoldThreshold(value)
         print("Hold Threshold: " .. value)
     end
 end)
 
 ReelSection:NewSlider("Tap Strength", "Tap movement strength", 1.0, 0.1, function(value)
-    if Reel then
-        Reel.setTapStrength(value)
+    if currentReelModule and currentReelModule.setTapStrength then
+        currentReelModule.setTapStrength(value)
         print("Tap Strength: " .. value)
     end
 end)
 
 ReelSection:NewSlider("Hold Strength", "Hold movement strength", 1.0, 0.1, function(value)
-    if Reel then
-        Reel.setHoldStrength(value)
+    if currentReelModule and currentReelModule.setHoldStrength then
+        currentReelModule.setHoldStrength(value)
         print("Hold Strength: " .. value)
     end
 end)

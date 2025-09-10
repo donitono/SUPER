@@ -12,6 +12,54 @@ local player = Players.LocalPlayer
 local isReeling = false
 local reelConnection = nil
 
+-- Enhanced detection function
+local function isReelActive()
+    local playerGui = player:FindFirstChild("PlayerGui")
+    if not playerGui then return false end
+    
+    -- Method 1: Look for "reel" GUI
+    local reelGui = playerGui:FindFirstChild("reel")
+    if reelGui and reelGui.Visible then
+        print("[SIMPLE REEL] 🎯 Found 'reel' GUI")
+        return true, reelGui
+    end
+    
+    -- Method 2: Look for any GUI with reel-related text
+    for _, gui in pairs(playerGui:GetChildren()) do
+        if gui:IsA("ScreenGui") and gui.Visible then
+            for _, descendant in pairs(gui:GetDescendants()) do
+                if descendant:IsA("TextLabel") and descendant.Visible then
+                    local text = descendant.Text:lower()
+                    if text:find("click") and text:find("hold") then
+                        print("[SIMPLE REEL] 🎯 Found reel text: '" .. descendant.Text .. "' in GUI: " .. gui.Name)
+                        return true, gui
+                    end
+                    if text:find("tap") and text:find("hold") then
+                        print("[SIMPLE REEL] 🎯 Found reel text: '" .. descendant.Text .. "' in GUI: " .. gui.Name)
+                        return true, gui
+                    end
+                end
+            end
+        end
+    end
+    
+    -- Method 3: Look for progress bars or specific UI elements
+    for _, gui in pairs(playerGui:GetChildren()) do
+        if gui:IsA("ScreenGui") and gui.Visible then
+            local playerbar = gui:FindFirstChild("playerbar", true)
+            local progress = gui:FindFirstChild("progress", true)
+            local fish = gui:FindFirstChild("fish", true)
+            
+            if playerbar or (progress and fish) then
+                print("[SIMPLE REEL] 🎯 Found reel elements in GUI: " .. gui.Name)
+                return true, gui
+            end
+        end
+    end
+    
+    return false, nil
+end
+
 -- Simple click function with multiple methods
 local function doClick()
     local success = false
@@ -69,7 +117,7 @@ local function doClick()
     return success
 end
 
--- Simple reel automation
+-- Simple reel automation with enhanced detection
 function SimpleReel.startAutoReel()
     if isReeling then return end
     isReeling = true
@@ -78,45 +126,45 @@ function SimpleReel.startAutoReel()
     
     reelConnection = RunService.Heartbeat:Connect(function()
         local success = pcall(function()
-            local playerGui = player:FindFirstChild("PlayerGui")
-            if playerGui then
-                local reelGui = playerGui:FindFirstChild("reel")
-                if reelGui and reelGui.Visible then
-                    print("[SIMPLE REEL] 🎯 Reel GUI detected - attempting click...")
-                    
-                    -- Try to click multiple times for reliability
-                    local clicked = doClick()
-                    if clicked then
-                        print("[SIMPLE REEL] ✅ Click successful!")
-                    else
-                        print("[SIMPLE REEL] ❌ Click failed, trying alternative...")
-                        -- Alternative: try to interact with reel elements directly
-                        for _, child in pairs(reelGui:GetChildren()) do
-                            if child:IsA("Frame") or child:IsA("TextButton") then
-                                pcall(function()
-                                    if child.Visible then
-                                        local conn
-                                        conn = child.MouseButton1Click:Connect(function()
-                                            conn:Disconnect()
-                                        end)
-                                        child.MouseButton1Click:Fire()
-                                    end
-                                end)
-                            end
-                        end
-                    end
-                    
-                    task.wait(0.1) -- Wait between clicks
+            local active, reelGui = isReelActive()
+            
+            if active and reelGui then
+                print("[SIMPLE REEL] 🎯 Reel minigame active - clicking!")
+                
+                -- Try to click multiple times for reliability
+                local clicked = doClick()
+                if clicked then
+                    print("[SIMPLE REEL] ✅ Click successful!")
                 else
-                    -- Debug: show what GUIs are available
-                    local guis = {}
-                    for _, child in pairs(playerGui:GetChildren()) do
-                        if child:IsA("ScreenGui") then
-                            table.insert(guis, child.Name)
+                    print("[SIMPLE REEL] ❌ Click failed, trying alternative...")
+                    
+                    -- Alternative method: Try to find clickable elements
+                    for _, descendant in pairs(reelGui:GetDescendants()) do
+                        if descendant:IsA("TextButton") or descendant:IsA("Frame") then
+                            pcall(function()
+                                if descendant.Visible and descendant.Active then
+                                    descendant.MouseButton1Click:Fire()
+                                    print("[SIMPLE REEL] 🎯 Fired click on: " .. descendant.Name)
+                                end
+                            end)
                         end
                     end
-                    if #guis > 0 then
-                        print("[SIMPLE REEL] 📋 Available GUIs:", table.concat(guis, ", "))
+                end
+                
+                task.wait(0.05) -- Small delay between clicks
+            else
+                -- Debug: List all visible GUIs
+                local playerGui = player:FindFirstChild("PlayerGui")
+                if playerGui then
+                    local visibleGuis = {}
+                    for _, child in pairs(playerGui:GetChildren()) do
+                        if child:IsA("ScreenGui") and child.Visible then
+                            table.insert(visibleGuis, child.Name)
+                        end
+                    end
+                    
+                    if #visibleGuis > 0 and tick() % 3 < 0.1 then -- Every 3 seconds
+                        print("[SIMPLE REEL] 📋 No reel detected. Visible GUIs:", table.concat(visibleGuis, ", "))
                     end
                 end
             end
