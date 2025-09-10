@@ -60,57 +60,104 @@ local function isReelActive()
     return false, nil
 end
 
--- Simple click function with multiple methods
+-- Enhanced click function using same method as auto shake
 local function doClick()
     local success = false
     
-    -- Method 1: mouse1click (most common)
+    -- Method 1: GuiService + Return key (same as auto shake)
     pcall(function()
-        if mouse1click then
-            mouse1click()
-            success = true
-            print("[SIMPLE REEL] 🖱️ Click (mouse1click)")
+        local playerGui = player:FindFirstChild("PlayerGui")
+        if playerGui then
+            local reelGui = playerGui:FindFirstChild("reel")
+            if reelGui then
+                -- Look for clickable button or frame
+                for _, descendant in pairs(reelGui:GetDescendants()) do
+                    if descendant:IsA("TextButton") or descendant:IsA("Frame") then
+                        if descendant.Visible and descendant.Active then
+                            game:GetService("GuiService").SelectedObject = descendant
+                            if game:GetService("GuiService").SelectedObject == descendant then
+                                local VirtualInputManager = game:GetService("VirtualInputManager")
+                                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
+                                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
+                                success = true
+                                print("[SIMPLE REEL] ✅ Click via GuiService + Return key")
+                                break
+                            end
+                        end
+                    end
+                end
+            end
         end
     end)
     
-    -- Method 2: mouse1press/release
+    -- Method 2: Tool events (backup method like auto shake)
     if not success then
         pcall(function()
-            if mouse1press and mouse1release then
-                mouse1press()
-                task.wait(0.05)
-                mouse1release()
-                success = true
-                print("[SIMPLE REEL] 🖱️ Click (mouse1press)")
+            local character = player.Character
+            if character then
+                local tool = character:FindFirstChildOfClass("Tool")
+                if tool and tool:FindFirstChild("events") then
+                    local reelEvent = tool.events:FindFirstChild("reel")
+                    if reelEvent then
+                        reelEvent:FireServer()
+                        success = true
+                        print("[SIMPLE REEL] ✅ Click via Tool reel event")
+                    end
+                    
+                    -- Try other possible event names
+                    if not success then
+                        for _, event in pairs(tool.events:GetChildren()) do
+                            if event.Name:lower():find("reel") or event.Name:lower():find("catch") then
+                                event:FireServer()
+                                success = true
+                                print("[SIMPLE REEL] ✅ Click via Tool event: " .. event.Name)
+                                break
+                            end
+                        end
+                    end
+                end
             end
         end)
     end
     
-    -- Method 3: VirtualInputManager
+    -- Method 3: VirtualInputManager with Return key (like shake)
     if not success then
         pcall(function()
             local VirtualInputManager = game:GetService("VirtualInputManager")
-            local mouse = player:GetMouse()
-            if VirtualInputManager and mouse then
-                VirtualInputManager:SendMouseButtonEvent(mouse.X, mouse.Y, 0, true, game, 0)
-                task.wait(0.01)
-                VirtualInputManager:SendMouseButtonEvent(mouse.X, mouse.Y, 0, false, game, 0)
-                success = true
-                print("[SIMPLE REEL] 🖱️ Click (VirtualInput)")
-            end
+            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
+            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
+            success = true
+            print("[SIMPLE REEL] ✅ Click via Return key")
         end)
     end
     
-    -- Method 4: Key simulation (Space bar)
+    -- Method 4: Space key (backup)
     if not success then
         pcall(function()
-            local UserInputService = game:GetService("UserInputService")
-            UserInputService:GetPropertyChangedSignal("InputBegan"):Connect(function() end)
-            game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-            task.wait(0.01)
-            game:GetService("VirtualInputManager"):SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+            local VirtualInputManager = game:GetService("VirtualInputManager")
+            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
             success = true
-            print("[SIMPLE REEL] ⌨️ Click (Space key)")
+            print("[SIMPLE REEL] ✅ Click via Space key")
+        end)
+    end
+    
+    -- Method 5: Direct FireServer on ReplicatedStorage events
+    if not success then
+        pcall(function()
+            local ReplicatedStorage = game:GetService("ReplicatedStorage")
+            local events = ReplicatedStorage:FindFirstChild("events")
+            if events then
+                -- Look for reel-related events
+                for _, event in pairs(events:GetChildren()) do
+                    if event.Name:lower():find("reel") then
+                        event:FireServer()
+                        success = true
+                        print("[SIMPLE REEL] ✅ Click via ReplicatedStorage event: " .. event.Name)
+                        break
+                    end
+                end
+            end
         end)
     end
     

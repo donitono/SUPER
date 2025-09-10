@@ -13,44 +13,78 @@ local player = Players.LocalPlayer
 local isReeling = false
 local reelConnection = nil
 
--- Aggressive clicking function
+-- Enhanced clicking function using same method as auto shake
 local function aggressiveClick()
-    -- Method 1: mouse1click
-    if mouse1click then
-        mouse1click()
-        print("[ULTRA REEL] 🖱️ mouse1click()")
-        return true
-    end
+    local success = false
     
-    -- Method 2: mouse1press
-    if mouse1press and mouse1release then
-        mouse1press()
-        task.wait(0.01)
-        mouse1release()
-        print("[ULTRA REEL] 🖱️ mouse1press/release()")
-        return true
-    end
-    
-    -- Method 3: VirtualInputManager
+    -- Method 1: GuiService + Return key (proven to work for shake)
     pcall(function()
-        local VIM = game:GetService("VirtualInputManager")
-        local mouse = player:GetMouse()
-        VIM:SendMouseButtonEvent(mouse.X, mouse.Y, 0, true, game, 0)
-        task.wait(0.01)
-        VIM:SendMouseButtonEvent(mouse.X, mouse.Y, 0, false, game, 0)
-        print("[ULTRA REEL] 🖱️ VirtualInputManager()")
+        local playerGui = player:FindFirstChild("PlayerGui")
+        if playerGui then
+            -- Look for any clickable UI element
+            for _, gui in pairs(playerGui:GetChildren()) do
+                if gui:IsA("ScreenGui") and gui.Visible then
+                    for _, descendant in pairs(gui:GetDescendants()) do
+                        if descendant:IsA("TextButton") or descendant:IsA("Frame") then
+                            if descendant.Visible and descendant.Active then
+                                game:GetService("GuiService").SelectedObject = descendant
+                                local VirtualInputManager = game:GetService("VirtualInputManager")
+                                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
+                                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
+                                success = true
+                                print("[ULTRA REEL] ✅ GuiService + Return key")
+                                return
+                            end
+                        end
+                    end
+                end
+            end
+        end
     end)
     
-    -- Method 4: KeyCode Space
-    pcall(function()
-        local VIM = game:GetService("VirtualInputManager")
-        VIM:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-        task.wait(0.01)
-        VIM:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
-        print("[ULTRA REEL] ⌨️ Space key()")
-    end)
+    -- Method 2: Tool events (like auto shake backup)
+    if not success then
+        pcall(function()
+            local character = player.Character
+            if character then
+                local tool = character:FindFirstChildOfClass("Tool")
+                if tool and tool:FindFirstChild("events") then
+                    for _, event in pairs(tool.events:GetChildren()) do
+                        if event:IsA("RemoteEvent") then
+                            event:FireServer()
+                            success = true
+                            print("[ULTRA REEL] ✅ Tool event: " .. event.Name)
+                            break
+                        end
+                    end
+                end
+            end
+        end)
+    end
     
-    return true
+    -- Method 3: Return key globally
+    if not success then
+        pcall(function()
+            local VirtualInputManager = game:GetService("VirtualInputManager")
+            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
+            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
+            success = true
+            print("[ULTRA REEL] ✅ Return key")
+        end)
+    end
+    
+    -- Method 4: Space key
+    if not success then
+        pcall(function()
+            local VirtualInputManager = game:GetService("VirtualInputManager")
+            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+            success = true
+            print("[ULTRA REEL] ✅ Space key")
+        end)
+    end
+    
+    return success
 end
 
 -- Ultra simple start function - just keep clicking
